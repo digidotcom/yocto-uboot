@@ -1,0 +1,52 @@
+#!/bin/sh
+# Print additional version information for non-release trees.
+
+usage() {
+	echo "Usage: $0 [srctree]" >&2
+	exit 1
+}
+
+cd "${1:-.}" || usage
+
+dub_ver="$(sed -ne 's/^.*define[[:blank:]]\+VERSION_TAG[^\"]\+\"\([^\"]\+\)\".*$/\1/g;T;p' \
+	   include/digi_version.h | tr '[:upper:]' '[:lower:]')"
+
+# Check for git and a git repo.
+if head=`git rev-parse --verify HEAD 2>/dev/null`; then
+	# Do we have an untagged version?
+	if git name-rev --tags HEAD | \
+	   grep -E '^HEAD[[:space:]]+(.*~[0-9]*|undefined)$' > /dev/null; then
+		dub_sha1="$(git describe | awk -F- '{printf("%s", $(NF))}')"
+		printf ' - %s-%s' ${dub_ver} ${dub_sha1}
+	# Do we have a DUB tag?
+	elif dub_tag="$(git describe --tags --exact-match --match 'DUB-*' 2>/dev/null)"; then
+		printf ' - %s' ${dub_tag}
+	# For no DUB tags print the SHA1
+	else
+		dub_sha1="$(git describe | awk -F- '{printf("%s", $(NF))}')"
+		printf ' - %s-%s' ${dub_ver} ${dub_sha1}
+	fi
+
+	# Are there uncommitted changes?
+	git update-index --refresh --unmerged > /dev/null
+	if git diff-index --name-only HEAD | grep -v "^scripts/package" \
+	    | read dummy; then
+		printf '%s' -dirty
+	fi
+
+	# Is this git on svn?
+	if git config --get svn-remote.svn.url >/dev/null; then
+		printf -- '-svn%s' "`git svn find-rev $head`"
+	fi
+else
+	printf " - %s" ${dub_ver}
+fi
+
+# Check for svn and a svn repo.
+if rev=`svn info 2>/dev/null` ; then
+	rev=`echo "${rev}" | grep '^Revision' | awk '{print $NF}'`
+	printf -- '-svn%s' $rev
+fi
+
+# Check for any localversion-* files
+printf '%s' "`cat localversion-* 2>/dev/null`"

@@ -1,0 +1,705 @@
+config SHOW_HELP
+	bool
+	default y
+	select UBOOT_SETTINGS
+
+menuconfig UBOOT_SETTINGS
+	bool "U-Boot settings"
+	default y
+	help
+	  Default configuration are available.
+	  Please use File -> Load in the toolbar and choose one of the available configurations.
+	  You can also store your specific configuration.
+	  Take care about saving your configuration and use Save As... .
+	  When using Save, the default configuration can be lost for ever.
+
+if UBOOT_SETTINGS
+
+config DIGIEL_USERCONFIG
+	bool
+	default y
+
+#------------------
+# HARDWARE SUPPORT
+#------------------
+config HAVE_LCD
+	bool
+	default y if (DEL_CCIMX51JS || DEL_CCIMX53JS || DEL_CCARDIMX28JS)
+	default n
+
+#-------
+#CONSOLE
+#-------
+menu "U-Boot console"
+
+config UBOOT_PROMPT
+	bool "Change U-Boot monitor prompt"
+	help
+	  Change U-Boot monitor prompt.
+
+config UBOOT_PROMPT_STR
+	string "Monitor Prompt"
+	depends on UBOOT_PROMPT
+	default "Digi # "
+	help
+	  Prompt to display in U-Boot monitor (shell).
+
+config UBOOT_BOARDNAME
+	bool "Change U-Boot board name"
+	help
+	  Change U-Boot board name show at start-up or with "version" command.
+
+config UBOOT_BOARDNAME_STR
+	string "Board Name"
+	depends on UBOOT_BOARDNAME
+	default "Development Board"
+	help
+	  Board name to display at U-Boot start-up banner or with "version" command.
+
+choice CONSOLE_PORT
+	prompt "Default serial port for U-Boot console"
+	default MX51_UART_2 if DEL_CCIMX51JS
+	default MX53_UART_1 if DEL_CCIMX53JS
+	default MX28_DUART if (DEL_CPX2 || DEL_CCARDIMX28JS)
+	default MX28_AUART_1 if (DEL_WR21)
+	help
+	  Select the serial port that will be used for U-Boot console.
+
+config MX51_UART_1
+	bool "UART 1"
+	depends on DEL_CCIMX51JS
+	help
+	  UART 1 (ttymxc0)
+
+config MX51_UART_2
+	bool "UART 2"
+	depends on DEL_CCIMX51JS
+	help
+	  UART 2 (ttymxc1)
+
+config MX51_UART_3
+	bool "UART 3"
+	depends on DEL_CCIMX51JS
+	help
+	  UART 3 (ttymxc2)
+
+config MX53_UART_1
+	bool "UART 1"
+	depends on DEL_CCIMX53JS
+	help
+	  UART 1 (ttymxc0)
+
+config MX53_UART_2
+	bool "UART 2"
+	depends on DEL_CCIMX53JS
+	help
+	  UART 1 (ttymxc1)
+
+config MX53_UART_3
+	bool "UART 3"
+	depends on DEL_CCIMX53JS
+	help
+	  UART 1 (ttymxc2)
+
+config MX53_UART_4
+	bool "UART 4"
+	depends on DEL_CCIMX53JS
+	help
+	  UART 1 (ttymxc3)
+
+config MX53_UART_5
+	bool "UART 5"
+	depends on DEL_CCIMX53JS
+	help
+	  UART 1 (ttymxc4)
+
+config MX28_DUART
+	bool "Debug UART"
+	depends on (DEL_CPX2 || DEL_CCARDIMX28JS)
+	help
+	  Debug UART
+
+config MX28_AUART_0
+	bool "Application UART 0"
+	depends on DEL_CCARDIMX28JS
+	select DEFAULT_SERIAL_AUART
+	help
+	  Application UART 0
+
+config MX28_AUART_1
+	bool "Application UART 1"
+	depends on (DEL_CCARDIMX28JS || DEL_WR21)
+	select DEFAULT_SERIAL_AUART
+	help
+	  Application UART 1
+
+config MX28_AUART_2
+	bool "Application UART 2"
+	depends on DEL_CCARDIMX28JS
+	select DEFAULT_SERIAL_AUART
+	help
+	  Application UART 2
+
+config MX28_AUART_3
+	bool "Application UART 3"
+	depends on DEL_CCARDIMX28JS
+	select DEFAULT_SERIAL_AUART
+	help
+	  Application UART 3
+
+config MX28_AUART_4
+	bool "Application UART 4"
+	depends on DEL_CCARDIMX28JS
+	select DEFAULT_SERIAL_AUART
+	help
+	  Application UART 4
+
+endchoice
+
+config DEFAULT_SERIAL_AUART
+	bool
+	default n
+
+config SILENT_CONSOLE
+	bool "Keep console output silent"
+	default y if DEL_CPX2
+	default n
+	help
+	  No output appears on console and no console input is read
+	  Environment Variable silent is set to yes by default
+
+if SILENT_CONSOLE && DEL_CPX2
+
+choice
+	prompt "GPIO for silent console"
+	default SILENT_CONSOLE_GPIO_DEFAULT
+	help
+	  Select the GPIO for silent console
+
+	config SILENT_CONSOLE_GPIO_DEFAULT
+		bool "Default GPIO"
+
+	config SILENT_CONSOLE_GPIO_ALT1
+		bool "Alternative GPIO"
+
+endchoice
+
+endif # SILENT_CONSOLE && DEL_CPX2
+
+if SILENT_CONSOLE && !DEL_CPX2
+config ENABLE_SILENT_RESCUE
+	bool "Recover silent console using a button"
+	default y
+	help
+	  Lets you recover the U-Boot monitor console by pressing
+	  a button of the JumpStart board
+
+if ENABLE_SILENT_RESCUE
+
+choice
+	prompt "Button for console recovery"
+	default USER_BUTTON1_ENABLE_CONSOLE
+	help
+	  Select the user button to press on the development board
+	  to recover the console from silent
+
+	config USER_BUTTON1_ENABLE_CONSOLE
+		bool "User button 1 on development board"
+		help
+		  If this is enabled, user button 1 on development board
+		  can be pressed to recover from silent console.
+
+	config USER_BUTTON2_ENABLE_CONSOLE
+		bool "User button 2 on development board"
+		help
+		  If this is enabled, user button 2 on development board
+		  can be pressed to recover from silent console.
+endchoice
+
+endif #ENABLE_SILENT_RESCUE
+endif #SILENT_CONSOLE
+
+config BAUDRATE
+	int "Default baudrate for console"
+	default 38400 if DEL_CCIMX51JS
+	default 115200 if DEL_CCIMX53JS || DEL_CCARDIMX28JS
+	range 110 115200
+	help
+	  Defines the default baudrate to use for the serial console.
+
+endmenu #CONSOLE
+
+#-------
+#ETHERNET
+#-------
+menuconfig NETWORK_SUPPORT
+	bool "Network support"
+	default y
+	depends on DEL_CCIMX51JS || DEL_CCIMX53JS
+
+if NETWORK_SUPPORT
+
+config CCIMX5X_ENABLE_FEC_ETH
+	bool "Enable internal FEC (Fast Ethernet Controller)"
+	default y
+	depends on DEL_CCIMX51JS || DEL_CCIMX53JS
+	help
+	  This option will enable the MXC internal FEC Ethernet
+	  controller.
+
+	  For using dual Ethernet you must enable both Ethernet
+	  controllers.
+
+	  NOTE: Enabling the FEC prevents from enabling display 2.
+
+config CCIMX5X_ENABLE_EXT_ETH
+	bool "Enable external SMSC 911x Ethernet controller"
+	default n
+	depends on DEL_CCIMX51JS || DEL_CCIMX53JS
+	help
+	  This option will enable the external SMSC 911x Ethernet
+	  controller.
+
+	  For using dual Ethernet you must enable both Ethernet
+	  controllers.
+
+endif #network_support
+
+#-------
+#LCD
+#-------
+if HAVE_LCD
+menuconfig DISPLAYS_ENABLE
+	bool "Displays enabling"
+	default y
+
+if DISPLAYS_ENABLE
+
+config DISPLAY1_ENABLE
+	bool "Enable display 1"
+	default y
+	help
+	  The hardware GPIO MUX will be configured for using
+	  and enabling display 1.
+	  Selection of the LCD or monitor, resolution, and frequency
+	  to use is done by means of the environment variable 'video'
+	  which contains a string in the form
+		'displayfb:NAMEOFDISPLAY[@RESOLUTION[@REFRESH_FREQ]]'
+
+	  For using dual-head you must enable both displays 1 and 2.
+
+if !(CCIMX5X_ENABLE_FEC_ETH && DEL_CCIMX51JS) && !DEL_CCARDIMX28JS
+config DISPLAY2_ENABLE
+	bool "Enable display 2"
+	default y if DEL_CCIMX53JS
+	help
+	  The hardware GPIO MUX will be configured for using
+	  and enabling display 2.
+	  Selection of the LCD or monitor, resolution, and frequency
+	  to use is done by means of the environment variable 'video2'
+	  which contains a string in the form
+		'displayfb:NAMEOFDISPLAY[@RESOLUTION[@REFRESH_FREQ]]'
+
+	  For using dual-head you must enable both displays 1 and 2.
+endif
+
+if DEL_CCIMX53JS
+config DISPLAY_LVDS_ENABLE
+	bool "Enable LVDS Display Bridge"
+	default y
+	help
+	  This option allows you to define the display and LVDS Display Bridge
+	  mode to use in the kernel. Selection is done by means of the
+	  environment variable 'ldb' which contains a string in the form
+		'MODE,di=DISPLAY,[ch0_map=MAPPING],[ch1_map=MAPPING]'
+endif
+
+if (CCIMX5X_ENABLE_FEC_ETH && DEL_CCIMX51JS)
+comment "--- Display 2 not available: disable internal FEC (Fast Ethernet Controller)"
+endif
+
+config UBOOT_SPLASH
+	bool "Splash screen support in U-Boot"
+	depends on (DEL_CCIMX51JS || DEL_CCIMX53JS)
+
+endif #displays_enabling
+endif #have_lcd
+
+#----------------
+#MODULE SELECTION
+#----------------
+choice
+	prompt "Module selection"
+	depends on (DEL_CCIMX51JS || DEL_CCIMX53JS)
+	default CCIMX5_STANDARD
+	help
+	  Select the ConnectCore for i.MX5x module
+
+	config CCIMX5_STANDARD
+		bool "Standard module"
+		help
+		  This is the standard module that comes with the JumpStart Kit.
+
+	config CCIMX5_SDRAM_128MB
+		bool "Module variant with 128MB SDRAM"
+		help
+		  Select this option if using a 128MB SDRAM module
+endchoice
+
+choice
+	prompt "Module selection"
+	depends on DEL_CPX2
+	default CPX2_STANDARD
+	help
+	  Select the ConnectCore for i.MX5x module
+
+	config CPX2_STANDARD
+		bool "Standard module"
+		help
+		  This is the standard module with 64MB SDRAM
+
+	config CPX2_SDRAM_128MB
+		bool "Module variant with 128MB SDRAM"
+		help
+		  Select this option if using a 128MB SDRAM module
+endchoice
+
+#-----------------
+#CPUFREQ selection
+#-----------------
+choice
+	prompt "CPU/EMI frequency selection"
+	depends on DEL_CCARDIMX28JS
+	default CPUFREQ_454
+	help
+	  Select the combination of CPU operating frequency and EMI (External
+	  Memory Interface) operating frequency.
+
+	  NOTE: The CPU frequency might be changed later in the OS if the CPU
+	  frequency scaling support is enabled. The EMI frequency will be fixed
+	  by this setting. Reducing the CPU/EMI operating frequency impacts the
+	  overall performance of the system, but reduces power consumption and
+	  system temperature.
+
+	config CPUFREQ_454
+		bool "454/205 MHz (default)"
+		help
+		  CPU freq = 454 MHz
+		  EMI freq = 205 MHz
+		  This is the maximum allowed CPU/EMI frequency and the
+		  default combination.
+
+	config CPUFREQ_360
+		bool "360/130 MHz"
+		help
+		  CPU freq = 360 MHz
+		  EMI freq = 130 MHz
+
+	config CPUFREQ_261
+		bool "261/130 MHz"
+		help
+		  CPU freq = 261 MHz
+		  EMI freq = 130 MHz
+endchoice
+
+config UBOOT_BOOTLETS_PATH
+	string
+	depends on DEL_CCARDIMX28JS
+	default "/261MHz" if CPUFREQ_261
+	default "/360MHz" if CPUFREQ_360
+
+#---------------
+#BOARD SELECTION
+#---------------
+choice
+	prompt "Development board selection"
+	default JSCCIMX51_JSK if DEL_CCIMX51JS
+	default JSCCIMX53_JSK if DEL_CCIMX53JS
+	default UBOOT_JSCCARDIMX28_VX if DEL_CCARDIMX28JS
+	help
+	  Select the development board
+
+	config JSCCIMX51_EAK
+		bool "Early Availability Development Board"
+		depends on DEL_CCIMX51JS
+		help
+		  Select this option if you are using the development board included in
+		  the Early Availability (EA) kit. The Digi part number for this board
+		  revision is 30011032-01. It is printed on the top side of the
+		  development board, close to the connectors of Signal Rail 1.
+
+	config JSCCIMX51_JSK
+		bool "JumpStart Kit Development Board"
+		depends on DEL_CCIMX51JS
+		help
+		  Select this option if you are using the development board included in
+		  Digi JumpStart Kit. The Digi part number for this board revision is
+		  30011032-03. It is printed on the top side of the development board,
+		  close to the connectors of Signal Rail 1.
+
+	config JSCCIMX53_JSK
+		bool "JumpStart Kit Development Board"
+		depends on DEL_CCIMX53JS
+		help
+		  Select this option if you are using the development board included in
+		  Digi JumpStart Kit.
+
+	config UBOOT_JSCCARDIMX28_V1
+		bool "ConnectCard for i.MX28 Development Board V1"
+		depends on DEL_CCARDIMX28JS
+		help
+		  Select this option if you have Version 1 of the Development Board.
+		  PCB S/N 30013792-01
+
+	config UBOOT_JSCCARDIMX28_VX
+		bool "ConnectCard for i.MX28 Development Board V2/V3/V4"
+		depends on DEL_CCARDIMX28JS
+		help
+		  Select this option if you have Version 2, 3, or 4 of the Development Board.
+		  PCB S/N 30013792-02, -03, or -04
+
+	config CUSTOM_BOARD
+		bool "Custom board"
+		help
+		  Select this option if using a custom board
+		  instead of Digi's development board.
+endchoice
+
+config BOOTDELAY
+	int "Delays autoboot"
+	default 4
+	help
+	  Time in seconds to delay autoboot
+
+config UBOOT_BOOTFILE
+	bool "Define bootfile default value"
+	help
+	  Set to yes to define the "bootfile" U-Boot environment variable.
+
+config BOOTFILE
+	string "Bootfile value"
+	depends on UBOOT_BOOTFILE
+	help
+	  Name of the image to load with TFTP.
+
+config AUTOLOAD_BOOTSCRIPT
+	bool "Automatically load bootscript on boot"
+	default y
+	help
+	  If enabled, U-Boot verifies the value of variable 'loadbootsc'. If the
+	  variable is set to 'yes' U-Boot tries to download via TFTP the filename
+	  stored at variable 'bootscript' and run it with autoscr command.
+
+	  Enabling this option sets automatically the variable 'loadbootsc' to 'yes'.
+	  The variable 'bootscript' is automatically set to the string
+	  "<platformname>-bootscript".
+
+config LEGACY_PLATFORM_NAMES
+	bool "Use legacy platform names (distinction wireless/non-wireless)"
+	help
+	  If enabled, will use legacy platform names as default values of
+	  variables 'uimg', 'kimg', 'rimg', 'aimg', 'arimg', 'npath'.
+	  Specifically will use:
+	     ccmx51js/ccwmx51js instead of ccimx51js
+	     ccmx53js/ccwmx53js instead of ccimx53js
+	     ccardmx28js/ccardwmx28js instead of ccardimx28js
+
+	  This configuration can later be changed using environment
+	  variable 'legacynames' (yes|no).
+
+config CUSTOM_UBOOT_IMAGE_NAME
+	bool "Use custom U-Boot image name"
+	help
+	  If enabled, allows you to modify the resultant U-Boot image name.
+
+	  Note that this will force you to supply the custom name in some
+	  U-Boot commands.
+
+	  If unsure, disable this option and use the default image name.
+
+config UBOOT_IMAGE_NAME
+	string "U-Boot image name"
+	depends on CUSTOM_UBOOT_IMAGE_NAME
+	default u-boot-ccimx51js.bin if DEL_CCIMX51JS
+	default u-boot-ccimx53js.bin if DEL_CCIMX53JS
+	default u-boot-cpx2.bin if DEL_CPX2
+	default u-boot-mx28_evk.bin if DEL_MX28_EVK
+	default u-boot-wr21.bin if DEL_WR21
+	default u-boot-ccardimx28js-ivt.sb if DEL_CCARDIMX28JS
+	help
+	  Set the file name for U-Boot image.
+
+config UBOOT_DISABLE_USER_KEYS
+	bool "Disable the User Keys read"
+	help
+	  Disables the checking for pressed User Keys on the Development board
+	  If enabled, when the keys are pressed, a console output appears:
+	  "User Key 1 pressed".
+	  If environment variable key1/key2 exists, U-Boot runs this command.
+	  Key1 has higher priority than Key2.
+
+config UBOOT_CHECK_CRC32_ON_BOOT
+	bool "U-Boot will check itself against a linked-in CRC32"
+	depends on DEL_CC9P9215JS || DEL_CCW9P9215JS || DEL_CME9210JS
+	default y
+	help
+	  When U-Boot has initialized all subsystems like flash or serial,
+	  it will check the image in NOR flash whether the CRC32 is
+	  correct. If there is a mismatch, it will be reported in the
+	  board info messages.
+
+config UBOOT_VERIFY_IN_SDRAM
+	bool "U-Boot will verify it's copy in SDRAM"
+	depends on DEL_CC9P9215JS || DEL_CCW9P9215JS || DEL_CME9210JS
+	default y
+	help
+	  After U-Boot has copied itself from NOR flash to SDRAM, it will verify
+	  the SDRAM contents before jumping to it. If there is a mismatch, the
+	  error LED will blink "SOS" and the wrong values will be in registers
+	  r3,4 and the addresses in r12,r13
+
+config UBOOT_IGNORE_NVRAM_ENV
+	bool "Ignore U-Boot environment variables in NVRAM"
+	help
+	  Enable this to ignore all U-Boot environment variables stored in
+	  the NVRAM partition in Flash. Default values will be used instead.
+
+	  WARNING: Use this feature only as a recovery method.
+
+#--------------------------
+# DUAL BOOT
+#--------------------------
+menuconfig DUAL_BOOT
+	bool "Dual boot mechanism"
+	default y if DEL_CPX2
+	default n
+	help
+	  Select yes, to activate the dual boot mechanism.
+	  This will permit the creation of duplicated system partitions that
+	  allow to store a redundant or rescue system in your device.
+
+	  IMPORTANT NOTE:
+	  ==============
+	  Activating Dual Boot does not automatically create duplicated
+	  partitions. You must run 'flpart' to either create them manually or reset
+	  the partition table to your operating system default, which will create
+	  them for you.
+
+	  Please read the U-Boot Reference Manual for more information about the
+	  Dual Boot mechanism
+
+if DUAL_BOOT
+choice
+	prompt "Dual boot mode"
+	default DUAL_BOOT_MODE_PEER
+	help
+	  Select the dual boot mode:
+	   - Peer system: the alternate partition holds a peer firmware (redundant).
+	   - Rescue system: the alternate partition holds a rescue firmware.
+
+	config DUAL_BOOT_MODE_PEER
+		bool "Peer system"
+		help
+		  Select this option if you will store a peer firmware in the duplicated
+		  system partition. This mode creates a redundant system so that, if
+		  one of the system partitions fails to boot, the alternate firmware will
+		  boot instead and the device will have exactly the same system.
+		  In this mode, the most recently updated system partition will be booted
+		  by default.
+
+	config DUAL_BOOT_MODE_RESCUE
+		bool "Rescue system"
+		help
+		  Select this option if you will store a rescue firmware in the duplicated
+		  system partition. The rescue firmware will be usually a stable well tested
+		  system that has the necessary applications to report, debug and recover
+		  the main firmware.
+		  In this mode, the rescue system will only be booted when the main system
+		  fails to boot.
+endchoice #dual_boot_mode
+
+choice
+	prompt "Startup guarantee mode"
+	default DUAL_BOOT_STARTUP_GUARANTEE_PER_BOOT if DEL_CPX2
+	default DUAL_BOOT_STARTUP_GUARANTEE_AFTER_UPDATE
+	help
+	  Select the dual boot startup guarantee mode:
+	   - Per boot: it guarantees the system boots every time, at the cost of
+	     writing a mark in persistent memory on every single boot.
+	   - After update: only guarantees that a system boots the first time after
+	     a firmware update.
+
+	config DUAL_BOOT_STARTUP_GUARANTEE_PER_BOOT
+		bool "Per boot"
+		help
+		  This mode guarantees that the system boots every time. It does so
+		  by writing a mark on persistent memory on every boot. This is the
+		  preferred method if the device has persistent RAM of any kind
+		  available.
+		  It is unrecommended if the only persistent memory available is
+		  Flash, to prevent wear.
+
+	config DUAL_BOOT_STARTUP_GUARANTEE_AFTER_UPDATE
+		bool "After update"
+		help
+		  This mode guarantees that the system boots the first time after a
+		  firmware upgrade. This is the preferred method if the platform
+		  does not have persistent RAM and flash needs to be used for
+		  persistent data storage.
+endchoice #startup_guarantee_mode
+
+config DUAL_BOOT_RETRIES
+	int "Default boot retry attempts"
+	range 1 3
+	default 3
+	help
+	  Sets the default number of boot retry attempts before switching to boot
+	  the alternate system (either peer or rescue).
+	  This value can be modified through the environment variable 'dualb_retries'.
+
+config DUAL_BOOT_WDT_ENABLE
+	bool "Enable watchdog before booting the OS"
+	default n
+	help
+	  Enables the device's watchdog timer just before giving the control to the
+	  operating system. This option guarantees that the device is reset if
+	  the operating system is not able to confirm that it has booted fine and
+	  has control over the watchdog timer by itself.
+
+	  Disable it if your platform does not have a watchdog timer.
+
+if DUAL_BOOT_WDT_ENABLE
+
+config DUAL_BOOT_WDT_TIMEOUT
+	int "Default watchdog timer timeout"
+	range 1 3600
+	default 30
+	help
+	  Sets the default timeout in seconds for the watchdog timer to reset the
+	  device if the system did not boot properly.
+	  This value can be modified through the environment variable
+	  'dualb_wdt_timeout'.
+
+endif #wdt_enable
+
+config DUAL_BOOT_SILENT
+	bool "Silent output for dual boot mechanism"
+	default n
+	help
+	  Enabling this option will remove any messages from the dual boot
+	  mechanism.
+
+config DUAL_BOOT_RETRY_FOREVER
+	bool "Retry boot forever if no system is valid"
+	default y
+	help
+	  Upon reaching a certain number of tries to boot the system without
+	  success, the dual boot mechanism will toggle to the alternate one.
+	  If the alternate one is not marked as valid either and this option
+	  is enabled the mechanism will endless try to boot it.
+	  If disabled, the no_system_panic action will be called. By default
+	  this action will print a message, but board-specific code can change
+	  this to blink a LED or take other action.
+
+endif #dual_boot
+endif #uboot_settings

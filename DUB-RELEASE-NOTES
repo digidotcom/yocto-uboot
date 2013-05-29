@@ -1,0 +1,207 @@
+--------------------
+U-Boot RELEASE NOTES
+--------------------
+
+v2009.08 - DUB-1.6.0.3, released on 2013/06/27
+	- Platforms renamed: Historically, platforms were divided into
+	  wireless (e.g.: ccwmx51js) and non-wireless (e.g.: ccmx51js).
+	  To simplify code and maintenance these have been merged into only
+	  one platform (e.g.: ccimx51js). A configuration option allows to
+	  build U-Boot with legacy names (this will be the default behavior
+	  to avoid problems with manufacturing scripts). Additionally, the
+	  environment variable 'legacynames' [yes|no] will allow to change
+	  between legacy names and new names.
+	- Added support for Fusion 7" display selection on ccardimx28js.
+	- Fix ccimx53js modules not booting when cameras were connected to
+	  the JSK board.
+	- Pass the following parameters to Linux in the bootargs for Yocto
+	  rootfs:
+	    - Ethernet/Wireless/Bluetooth MAC addresses
+	    - wdmode (for wireless module)
+	- Dynamic calculation of 'loadaddr' (the address in RAM where files
+	  are transferred) depending on available RAM and U-Boot load address
+	  to allow the maximum possible file size transfers.
+	  NOTE: Requires a reset of previously existing 'loadaddr' with:
+	      # setenv loadaddr
+	      # saveenv
+	- Added new ccardimx28js variants 0x0e..0x12
+
+
+v2009.08 - DUB-1.5.2.1, released on 2013/03/15
+	- Added ccxmx51 variant CC-MX-LC47-ZM-1
+	  (i.MX512@800MHz, 128/128 1xEth, accelerometer)
+
+
+v2009.08 - DUB-1.5.1.3, released on 2013/02/19
+	- Fix intermittent hang during TFTP on ccxmx53js.
+	- Load address for WindowsCE images set depending on
+	  available RAM memory, to allow loading kernels bigger
+	  than 64MiB.
+	- Fix bug when using large filename paths
+
+
+v2009.08 - DUB-1.5.0.1, released on 2012/12/11
+	- Support ccardimx28 module hardware version 3.
+	- Added configuration option for CPU/EMI operating frequency pair
+	  on ccardimx28 modules.
+	- Unconfigure ccardimx28 GPIOs that could cause conflicts in Linux.
+	- Added USB support for ccimx53 modules.
+	- Added support for ccimx53 variants with 128MiB SDRAM.
+	- Fixed loops-per-jiffie on ccardimx28 to save boot time.
+	- Added command to verify flash contents.
+	- Added support for PMIC M13892 revisions B and C.
+	- Added additional LCD displays to display selection 'video' command
+	  (Fusion F04B0101 & F07A0102).
+
+
+v2009.08 - DUB-1.4.0.3, released on 2012/07/12
+	- Added support to boot from SATA media.
+	- Added support to boot from MMC media on ccard(w)mx28js.
+	- Automatic CPU reset to recover from spurious wrong NAND controller
+	  initialization on i.MX28.
+	- Fixed and improved LCD configurations in NVRAM
+	- Fixed regression on certain ccwmx51 NAND variants
+
+
+v2009.08 - DUB-1.3.0.3, released on 2012/06/06
+	- Added ConnectCard for i.MX28 platform support.
+	- Added 'fbprimary' variable to select the display to be used as
+	  primary interface.
+	- Added 'btaddr' variable in NVRAM to hold Bluetooth adapter
+	  MAC address.
+	- 'video' command extended to handle two custom LCD configurations,
+	  which are saved into the NVRAM. These configurations are passed to
+	  the kernel through the shared memory.
+	- Added 'calibration' yes|no variable to pass (or not) the calibration
+	  option to the kernel command line.
+	- Added option to select the cc(w)mx51js variant in the U-Boot config,
+	  which allows to build U-Boot for the 128MB SDRAM variant from DigiESP.
+	- Added LVDS display enable in configuration tool.
+	- Added 'hostname' variable to store the device's hostname in NVRAM.
+	  If this variable does not exist it is automatically generated out of
+	  the platform abbreviated name and the last three bytes of the first
+	  MAC address (ethaddr).  E.g. CCWMX51-123456.
+	- Added 'ram' as new media to dboot/update commands.
+	- Disabled splash screen support by default
+	- Updated U-Boot Reference Manual PDF downloadable at
+	  http://www.digi.com/support
+
+
+v2009.08 - DUB-1.2.5, released on 2012/05/07
+	- Add support for ccimx53 module variant 0x0d and 4K page NAND Flashes
+	  (used in this module)
+
+
+v2009.08 - DUB-1.2.4, released on 2012/04/20
+	- Add workarround, for the ConnectCore i.MX53/Wi-i.MX53 modules,
+	  to overcome the i2c communication issues between the CPU and
+	  the PMIC.
+	- Minor general bug fixes.
+
+
+v2009.08 - DUB-1.2.3, released on 2012/02/29
+	- fix MMU for 1GB SDRAM variant on ConnectCore i.MX53/Wi-i.MX53
+	- skip confirmation questions during bootscript execution
+
+
+v2009.08 - DUB-1.2.2, released on 2012/02/20
+	- add LED support to cc(w)mx53js platforms
+	- fix strange hang after PMIC a poweroff on some cc(w)mx53js units
+
+
+v2009.08 - DUB-1.2.1, released on 2012/02/01
+	- minor fix to on-the-fly TFTP update mechanism
+	- skip ubifs handling when updating a ubi image
+	- implement i2c workaround recommended by Dialog to overcome some
+	  problems detected with the i2c communication with the PMIC.
+	  Refer to the product notice from Dialog for additional information.
+
+
+v2009.08 - DUB-1.2.0, released on 2012/01/20
+	- Added support for ConnectCore i.MX53/Wi-i.MX53.
+	- Added optional parameter to 'dboot' command for selecting
+	  the partition to use as rootfs (for Linux|Android).
+	- Added dual-boot mechanism for redundant and rescue systems.
+	- Remove legacy rescue partition types and system.
+	- Added on-the-fly TFTP update mechanism for writing firmware
+	  to flash while downloading.
+	- Added LVDS display bridge configuration to video command.
+	- Updated documentation (http://www.digi.com/support)
+
+
+v2009.08 - DUB-1.1.6, released on 2011/10/11
+	- Added support for UBIFS partitions
+	- ccimx51js: fix errata 8690 (disable the buck current limit)
+
+
+v2009.08 - DUB-1.1.5, released on 2011/09/06
+	- Fix incorrect definition for Hardware Variant with hwid = 0x15.
+
+
+v2009.08 - DUB-1.1.4, released on 2011/09/05
+	- Added support for MT29F2G08ABAEA nand flash (replaces EOL
+	  29F2G08ABABA).
+	- Added new variants (variant IDs: 0x14, 0x15 and 0x16).
+	- For the ConnectCore i.MX51/Wi-i.MX51, added new option to
+	  select enabling all peripheral clocks or not (to save power).
+
+
+v2009.08 - DUB-1.1.3, released on 2011/05/31
+	- Added support for new ConnectCore i.MX51 and ConnectCore Wi-i.MX51
+	  variants with 2GB nand flash.
+	- Fixed pad configuration of SPI1_RDY pin, for ConnectCore i.MX51/
+	  Wi-i.MX51 family.
+
+
+v2009.08 - DUB-1.1.2, released on 2011/04/19
+	- Added support for new ConnectCore i.MX51 and ConnectCore Wi-i.MX51
+	  variants with 128MB of SDRAM.
+	- Added support to boot from a specific flash partition (allows to
+	  store many OS images on the flash and boot from one of them).
+
+
+v2009.08 - DUB-1.1.1, released on 2011/03/24
+	- Added support for new ConnectCore i.MX51 and ConnectCore Wi-i.MX51
+	  variants.
+	- Added support for ubi filesystem and ubi volumes.
+	- Added splash screen support for ConnectCore i.MX51/Wi-i.MX51 family.
+	  Note that only LCD displays are supported.
+	- Added early support for ConnectCore Wi-i.MX53. Note that this
+	  platform is not supported yet and that the code is available _only_
+	  for internal use and early evaluation.
+	- Added new target to dboot command to boot Android.
+	- Merged U-Boot FSL patches from rel_imx_2.6.35_11.01.00.
+
+
+v2009.08 - DUB-1.0.14, released on 2010/11/05
+	- Added support for ccmx51 (ConnectCore i.MX51)
+	- Added support for ConnectCore Wi-i.MX51/i.MX51 industrial
+	  variants (600MHz)
+	- Added USB host support
+	- Added support to configure the bootloader through the graphic
+	  configuration tool (Digi ESP/Visual Studio addin)
+	- Enabled MMU and level 2 cache (significantly improving the
+	  overall performance)
+	- Added support to boot from rescue images, when primary image
+	  were corrupted
+	- Added support to blow the eFuses (only on the i.mx51 based
+	  Modules)
+	- NAND Flash OOB format changed (*)
+	- Added 'video' command to set video variables for display support
+	- Added support to boot WindowsCE images with header (compressed
+	  and non-compressed)
+	- Added support to select the serial console through environment
+	  variables
+	- Added support for the final ConnectCore Wi-i.MX51/i.MX51 hardware
+	  (module and base board)
+	- Added support to disable silent console, through GPIO
+	- Added support to pass to the linux kernel a pre-computed value
+	  of loops per jiffy (improves boot time).
+	- Several minor adjustments on the default partition size(s),
+	  Load addresses, etc. for linux and WinCE.
+	- Change Digi U-Boot version numbering to DUB-X.Y.Z with three numbers
+
+	* This U-Boot is not compatible with previous U-Boot DUB-1.0-3P1.
+	  If you own a module with old U-Boot a special migration process is required
+	  to reformat the Flash. Ask Digi Support service at www.digi.com/support
+	  for the ConnectCore Wi-i.MX51 EAK to JSK U-Boot migration guide.
