@@ -80,6 +80,7 @@
 
 #define CONFIG_SYS_64BIT_VSPRINTF
 
+#define BOARD_LATE_INIT
 #define	BOARD_BEFORE_MLOOP_INIT
 #define CONFIG_BOARD_CLEANUP_BEFORE_LINUX
 #define CONFIG_COMPUTE_LPJ		1
@@ -95,6 +96,19 @@
 #define CONFIG_SETUP_MEMORY_TAGS	1
 #define CONFIG_INITRD_TAG		1
 #define CONFIG_SERIAL_TAG		1	/* hwid */
+
+/*
+ * Default configuration
+ */
+#define CONFIG_CMD_MMC
+
+/* DBL configuration */
+#if defined(CONFIG_DBL)
+#undef CONFIG_CMD_MMC			/* Don't have MMC */
+#define CONFIG_DISABLE_CTRLC		/* Disable CTRL-C */
+#define CONFIG_DISABLE_CONSOLE_RX	/* Disable console input */
+#endif
+
 
 /**
  * Digi commands and defines
@@ -205,8 +219,6 @@
 /*
  * MMC Driver
  */
-#define CONFIG_CMD_MMC
-
 #ifdef CONFIG_CMD_MMC
 	#define CONFIG_MMC
 	#define CONFIG_IMX_SSP_MMC		/* MMC driver based on SSP */

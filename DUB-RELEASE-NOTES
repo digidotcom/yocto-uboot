@@ -2,6 +2,20 @@
 U-Boot RELEASE NOTES
 --------------------
 
+v2009.08 - DUB-1.6.3.1, released on 2013/11/13
+	- Updated version string to match tag
+
+
+v2009.08 - DUB-1.6.2.1, released on 2013/10/16
+	- ccardimx28: Restore NAND controller state after
+	  occasional bootstream update error.
+
+
+v2009.08 - DUB-1.6.1.1, released on 2013/08/27
+	- ccardimx28: Added support for v6 modules
+	- ccardimx28: Added support for DBL board
+
+
 v2009.08 - DUB-1.6.0.3, released on 2013/06/27
 	- Platforms renamed: Historically, platforms were divided into
 	  wireless (e.g.: ccwmx51js) and non-wireless (e.g.: ccmx51js).

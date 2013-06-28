@@ -3289,7 +3289,8 @@ ccardimx28js_legacynames_config \
 ccardimx28js_261MHz_config \
 ccardimx28js_360MHz_config \
 ccardimx28js_test_config \
-ccardimx28js_dbg_config : unconfig
+ccardimx28js_dbg_config \
+ccardimx28js_dbl_config : unconfig
 	@mkdir -p $(obj)include
 	@if [ "$(findstring _dbg_, $@)" ] ; then \
 		echo "#define CONFIG_DOWNLOAD_BY_DEBUGGER" >> $(obj)include/config.h ; \
@@ -3302,6 +3303,10 @@ ccardimx28js_dbg_config : unconfig
 	@if [ "$(findstring _legacynames_, $@)" ] ; then \
 		echo "#define CONFIG_LEGACY_PLATFORM_NAMES" >> $(obj)include/config.h ; \
 		echo "Configuring for legacy platform names"; \
+	fi;
+	@if [ "$(findstring _dbl_, $@)" ] ; then \
+		echo "#define CONFIG_DBL" >> $(obj)include/config.h ; \
+		echo "Configuring for DBL platform"; \
 	fi;
 	@$(MKCONFIG) -a ccardimx28 arm arm926ejs ccardimx28 freescale mx28
 	@echo "CONFIG_BUILD_BOOTSTREAM = y" >> $(obj)include/config.mk

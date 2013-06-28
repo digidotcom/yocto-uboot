@@ -428,7 +428,7 @@ int mtd_commit_bcb(struct mtd_info *mtd,
 {
 	int chip;
 	loff_t end_index, search_area_indices[2], o;
-	int err = 0, r = -1;
+	int r = 0;
 	int i;
 	int j;
 	unsigned stride_size_in_bytes;
@@ -479,7 +479,7 @@ int mtd_commit_bcb(struct mtd_info *mtd,
 	// Loop over search areas for this BCB.
 	//----------------------------------------------------------------------
 
-	for (i = 0; !err && i < count; i++) {
+	for (i = 0; i < count; i++) {
 
 		//--------------------------------------------------------------
 		// Compute the search area index that marks the end of the
@@ -526,8 +526,7 @@ int mtd_commit_bcb(struct mtd_info *mtd,
 						r = MtdErase(chip, o, mtd->erasesize);
 						if (r < 0) {
 							fprintf(stderr, "mtd: Failed to erase block @0x%llx\n", o);
-							err++;
-							continue;
+							goto _out;
 						}
 					}
 				}
@@ -545,14 +544,15 @@ int mtd_commit_bcb(struct mtd_info *mtd,
 						/* We're going to write a raw page (data+oob).
 						 * Change the mode to RAW. Then restore it. */
 						int old_mode = nandchip->ops.mode;
+						int retries = 1;
 
-						nandchip->ops.datbuf = bootblock->buf;
+_retry:						nandchip->ops.datbuf = bootblock->buf;
 						nandchip->ops.mode = MTD_OOB_RAW;
 						r = mtd->write_oob(mtd, o, &nandchip->ops);
 						if (r) {
 							fprintf(stderr, "mtd: Failed to write %s @%d: 0x%llx (%d)\n",
 								bcb_name, chip, o, r);
-							err ++;
+							goto _out;
 						}
 						//------------------------------------------------------
 						// Verify the written data
@@ -561,13 +561,28 @@ int mtd_commit_bcb(struct mtd_info *mtd,
 						r = mtd->read_oob(mtd, o, &nandchip->ops);
 						if (r) {
 							fprintf(stderr, "mtd: Failed to read @0x%llx (%d)\n", o, r);
-							err++;
-							goto _error;
+							/* restore mode */
+							nandchip->ops.mode = old_mode;
+							goto _out;
 						}
 						if (memcmp(bootblock->buf, readbuf, mtd->writesize)) {
 							fprintf(stderr, "mtd: Verification error @0x%llx\n", o);
-							err++;
-							goto _error;
+							/* restore mode */
+							nandchip->ops.mode = old_mode;
+							/*
+							 * If the RAW write operation failed the NAND may be
+							 * in an unknown status. Do a write with restored mode to
+							 * return the NAND to a correct status, then
+							 * erase the block and retry.
+							 */
+							mtd->write(mtd, o, size, &nbytes, (const void *)bootblock->buf);
+							MtdErase(chip, o, mtd->erasesize);
+							if (retries--) {
+								fprintf(stderr, "mtd: Retrying\n");
+								goto _retry;
+							}
+							r = -1;
+							goto _out;
 						}
 
 						if (cfg->flags & F_VERBOSE)
@@ -582,7 +597,7 @@ int mtd_commit_bcb(struct mtd_info *mtd,
 						if (r || nbytes != size) {
 							fprintf(stderr, "mtd: Failed to write %s @%d: 0x%llx (%d)\n",
 								bcb_name, chip, o, r);
-							err ++;
+							goto _out;
 						}
 						//------------------------------------------------------
 						// Verify the written data
@@ -590,13 +605,13 @@ int mtd_commit_bcb(struct mtd_info *mtd,
 						r = mtd->read(mtd, o, size, &nbytes, (void *)readbuf);
 						if (r || nbytes != size) {
 							fprintf(stderr, "mtd: Failed to read @0x%llx (%d)\n", o, r);
-							err++;
-							goto _error;
+							r = -1;
+							goto _out;
 						}
 						if (memcmp(bootblock->buf, readbuf, size)) {
 							fprintf(stderr, "mtd: Verification error @0x%llx\n", o);
-							err++;
-							goto _error;
+							r = -1;
+							goto _out;
 						}
 						if (cfg->flags & F_VERBOSE)
 							fprintf(stdout, "mtd: Verified %s%d @%d:0x%llx(%x)\n",
@@ -610,11 +625,11 @@ int mtd_commit_bcb(struct mtd_info *mtd,
 	}
 
 	if (cfg->flags & F_VERBOSE)
-		printf("%s(%s): status %d\n", __func__, bcb_name, err);
+		printf("%s(%s): OK\n", __func__, bcb_name);
 
-_error:
+_out:
 	free(readbuf);
-	return err;
+	return r;
 }
 
 int v1_rom_mtd_commit_structures(struct mtd_info *mtd,
@@ -656,12 +671,14 @@ int v1_rom_mtd_commit_structures(struct mtd_info *mtd,
 
 	r = fcb_encrypt(&bootblock->fcb, bootblock->buf, size, 1);
 	if (r < 0)
-		goto _error;;
+		goto _out;
 
 	//----------------------------------------------------------------------
 	// Write the FCB search area.
 	//----------------------------------------------------------------------
-	mtd_commit_bcb(mtd, cfg, bootblock, "FCB", 0, 0, 0, 1, size);
+	r = mtd_commit_bcb(mtd, cfg, bootblock, "FCB", 0, 0, 0, 1, size);
+	if (r)
+		goto _out;
 
 	//----------------------------------------------------------------------
 	// Write the DBBT search area.
@@ -670,7 +687,9 @@ int v1_rom_mtd_commit_structures(struct mtd_info *mtd,
 	memset(bootblock->buf, 0, size);
 	memcpy(bootblock->buf, &(bootblock->dbbt28), sizeof(bootblock->dbbt28));
 
-	mtd_commit_bcb(mtd, cfg, bootblock, "DBBT", 1, 1, 1, 1, mtd->writesize);
+	r = mtd_commit_bcb(mtd, cfg, bootblock, "DBBT", 1, 1, 1, 1, mtd->writesize);
+	if (r)
+		goto _out;
 
 	//----------------------------------------------------------------------
 	// Loop over the two boot streams.
@@ -759,6 +778,8 @@ int v1_rom_mtd_commit_structures(struct mtd_info *mtd,
 				r = mtd->write(mtd, ofs, chunk, &nbytes, (const void *)read_addr);
 				if (r || nbytes != chunk) {
 					fprintf(stderr, "mtd: Failed to write BS @0x%llx (%d)\n", ofs, r);
+					r = -1;
+					goto _out;
 				}
 			}
 			//------------------------------------------------------
@@ -767,11 +788,13 @@ int v1_rom_mtd_commit_structures(struct mtd_info *mtd,
 			r = mtd->read(mtd, ofs, chunk, &nbytes, (void *)readbuf);
 			if (r || nbytes != chunk) {
 				fprintf(stderr, "mtd: Failed to read BS @0x%llx (%d)\n", ofs, r);
-				goto _error;
+				r = -1;
+				goto _out;
 			}
 			if (memcmp((void *)read_addr, readbuf, chunk)) {
 				fprintf(stderr, "mtd: Verification error @0x%llx\n", ofs);
-				goto _error;
+				r = -1;
+				goto _out;
 			}
 
 			ofs += mtd->writesize;
@@ -788,15 +811,14 @@ int v1_rom_mtd_commit_structures(struct mtd_info *mtd,
 
 		if (ofs >= end) {
 			fprintf(stderr, "mtd: Failed to write BS#%d\n", i);
-			goto _error;
+			r = -1;
+			goto _out;
 		}
 	}
 
+_out:
 	free(readbuf);
-	return 0;
-_error:
-	free(readbuf);
-	return -1;
+	return r;
 }
 
 int v2_rom_mtd_commit_structures(struct mtd_info *mtd,
@@ -807,7 +829,7 @@ int v2_rom_mtd_commit_structures(struct mtd_info *mtd,
 {
 	int startpage, start, size;
 	unsigned int search_area_size_in_bytes, stride_size_in_bytes;
-	int i, r, chunk;
+	int i, r = 0, chunk;
 	loff_t ofs, end;
 	int chip = 0;
 	unsigned long read_addr;
@@ -842,7 +864,9 @@ int v2_rom_mtd_commit_structures(struct mtd_info *mtd,
 	memset(bootblock->buf, 0, size);
 	memcpy(bootblock->buf, &(bootblock->fcb), sizeof(bootblock->fcb));
 
-	mtd_commit_bcb(mtd, cfg, bootblock, "FCB", 0, 0, 0, 1, mtd->writesize);
+	r = mtd_commit_bcb(mtd, cfg, bootblock, "FCB", 0, 0, 0, 1, mtd->writesize);
+	if (r)
+		goto _out;
 
 	//----------------------------------------------------------------------
 	// Write the DBBT search area.
@@ -851,7 +875,9 @@ int v2_rom_mtd_commit_structures(struct mtd_info *mtd,
 	memset(bootblock->buf, 0, size);
 	memcpy(bootblock->buf, &(bootblock->dbbt28), sizeof(bootblock->dbbt28));
 
-	mtd_commit_bcb(mtd, cfg, bootblock, "DBBT", 1, 1, 1, 1, mtd->writesize);
+	r = mtd_commit_bcb(mtd, cfg, bootblock, "DBBT", 1, 1, 1, 1, mtd->writesize);
+	if (r)
+		goto _out;
 
 	//----------------------------------------------------------------------
 	// Write the DBBT table area.
@@ -874,6 +900,8 @@ int v2_rom_mtd_commit_structures(struct mtd_info *mtd,
 			r = mtd_write_page(md, chip, ofs + 4 * mtd->writesize, 1);
 			if (r != mtd->writesize) {
 				fprintf(stderr, "mtd: Failed to write BBTN @0x%llx (%d)\n", ofs, r);
+				r = -1;
+				goto _out;
 			}
 		}
 	}
@@ -963,6 +991,8 @@ int v2_rom_mtd_commit_structures(struct mtd_info *mtd,
 				r = mtd->write(mtd, ofs, chunk, &nbytes, (const void *)read_addr);
 				if (r || nbytes != chunk) {
 					fprintf(stderr, "mtd: Failed to write BS @0x%llx (%d)\n", ofs, r);
+					r = -1;
+					goto _out;
 				}
 			}
 
@@ -972,11 +1002,13 @@ int v2_rom_mtd_commit_structures(struct mtd_info *mtd,
 			r = mtd->read(mtd, ofs, chunk, &nbytes, (void *)readbuf);
 			if (r || nbytes != chunk) {
 				fprintf(stderr, "mtd: Failed to read BS @0x%llx (%d)\n", ofs, r);
-				goto _error;
+				r = -1;
+				goto _out;
 			}
 			if (memcmp((void *)read_addr, readbuf, chunk)) {
 				fprintf(stderr, "mtd: Verification error @0x%llx\n", ofs);
-				goto _error;
+				r = -1;
+				goto _out;
 			}
 
 			ofs += mtd->writesize;
@@ -990,16 +1022,14 @@ int v2_rom_mtd_commit_structures(struct mtd_info *mtd,
 
 		if (ofs >= end) {
 			fprintf(stderr, "mtd: Failed to write BS#%d\n", i);
-			return -1;
+			r = -1;
 		}
 
 	}
 
+_out:
 	free(readbuf);
-	return 0;
-_error:
-	free(readbuf);
-	return -1;
+	return r;
 }
 
 int write_bootstream(const nv_param_part_t* part,
@@ -1059,10 +1089,7 @@ int write_bootstream(const nv_param_part_t* part,
 #elif defined(CONFIG_MX53)
 	r = v2_rom_mtd_init(mtd, &cfg, &bootblock, bs_size, part->ullSize);
 #endif
-	if (r < 0) {
-		printf("mtd_init failed!\n");
-	}
-	else {
+	if (r == 0) {
 #if defined(CONFIG_MX28)
 		r = v1_rom_mtd_commit_structures(mtd, &cfg, &bootblock, bs_start_address, bs_size);
 #elif defined(CONFIG_MX53)

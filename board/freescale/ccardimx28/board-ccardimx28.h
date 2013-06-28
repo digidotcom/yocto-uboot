@@ -36,9 +36,9 @@ struct ccardimx28_ident {
 struct ccardimx28_ident ccardimx28_id[] = {
 /* 0x00 */	        	{         0,     0, "Unknown"},
 /* 0x01 */	        	{         0,     0, "Not supported"},
-/* 0x02 - 55001667-01 */	{0x10000000,   256, "i.MX287, 2 Eth, 1 USB, Wireless, BT, LCD, JTAG, 1-wire"},
+/* 0x02 - 55001667-01/03 */	{0x10000000,   256, "i.MX287, 2 Eth, 1 USB, Wireless, BT, LCD, JTAG, 1-wire"},
 /* 0x03 - 55001668-01 */	{0x10000000,   256, "i.MX287, 2 Eth, 1 USB, Wireless, BT, LCD, JTAG"},
-/* 0x04 - 55001669-01 */	{ 0x8000000,   128, "i.MX287, 1 Eth, 2 USB, Wireless, BT, LCD, JTAG"},
+/* 0x04 - 55001669-01 */	{ 0x8000000,   128, "i.MX287, 1 Eth, 2 USB, Wireless, LCD, JTAG"},
 /* 0x05 - 55001674-01 */	{ 0x8000000,   128, "i.MX287, 1 Eth, 2 USB, LCD, JTAG"},
 /* 0x06 - 55001670-01 */	{ 0x8000000,   128, "i.MX280, 2 USB, Wireless"},
 /* 0x07 - 55001671-01 */	{ 0x8000000,   128, "i.MX280, 1 Eth, 2 USB, Wireless, JTAG"},
@@ -52,7 +52,6 @@ struct ccardimx28_ident ccardimx28_id[] = {
 /* 0x0f - 55001669-02 */	{0x10000000,   256, "i.MX287, 1 Eth, 2 USB, Wireless, LCD, JTAG"},
 /* 0x10 - 55001667-02 */	{ 0x8000000,   128, "i.MX287, 1 Eth, 2 USB, Wireless, BT, LCD, JTAG"},
 /* 0x11 - 55001668-02 */	{ 0x8000000,   128, "i.MX287, 2 Eth, 1 USB, Wireless, BT, LCD, JTAG"},
-/* 0x12 - 55001667-03 */	{0x10000000,   256, "i.MX287, 2 Eth, 1 USB, Wireless, BT, LCD, JTAG, 1-wire"},
 				{         0,     0, "Reserved for future use"},
 				{         0,     0, "Reserved for future use"},
 };

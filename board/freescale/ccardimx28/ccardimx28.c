@@ -342,7 +342,6 @@ unsigned int get_preset_lpj(void)
 
 void NvPrintHwID(void)
 {
-	get_module_hw_id();
 	printf("    TF (location): 0x%02x\n", mod_hwid.tf);
 	printf("    Variant:       0x%02x\n", mod_hwid.variant);
 	printf("    HW Version:    %d\n", mod_hwid.hv);
@@ -522,15 +521,6 @@ int board_init(void)
 	/* Adress of boot parameters */
 	gd->bd->bi_boot_params = PHYS_SDRAM_1 + 0x100;
 
-	/* On modules older than V1, a FET is blocking the 3V3 supply.
-	 * To have this voltage enabled to the module LCD_RS
-	 * must be driven low. (On V1 modules this line is not used
-	 * so the code is harmless).
-	 */
-	pin_set_type(PINID_LCD_RS, PIN_GPIO);
-	pin_gpio_direction(PINID_LCD_RS, 1);
-	pin_gpio_set(PINID_LCD_RS, 0);
-
 #if defined(CONFIG_SILENT_CONSOLE) && defined(ENABLE_CONSOLE_GPIO)
 	init_console_gpio();
 #endif
@@ -549,6 +539,41 @@ int board_init(void)
 
 	return 0;
 }
+
+#ifdef BOARD_LATE_INIT
+int board_late_init(void)
+{
+	int fet_active = 1;	/* default polarity */
+
+	/* On modules newer than V1, a FET is blocking the 3V3 supply.
+	 * To have this voltage enabled to the module LCD_RS
+	 * must be driven low on modules V2..V5 and driven high on modules V6.
+	 * On V1 modules this line is not used so the code is harmless.
+	 * On modules with blank OTP, a V6 is considered by default.
+	 */
+	if (mod_hwid.hv > 0 && mod_hwid.hv < 6)
+		fet_active = 0;	/* active low */
+	/* First set values to avoid glitches */
+	pin_gpio_set(PINID_LCD_RS, fet_active);
+	pin_gpio_direction(PINID_LCD_RS, 1);
+	pin_set_type(PINID_LCD_RS, PIN_GPIO);
+
+#ifdef CONFIG_DISABLE_CONSOLE_RX
+	{
+		char *s;
+		int bootdelay;
+
+		if ((s=getenv("bootdelay")) != NULL) {
+			bootdelay = (int)simple_strtol(s, NULL, 10);
+			if (bootdelay == 0)
+				gd->flags |= GD_FLG_DISABLE_CONSOLE_RX;
+		}
+	}
+#endif
+
+	return 0;
+}
+#endif
 
 int dram_init(void)
 {
@@ -904,8 +929,10 @@ void board_cleanup_before_linux(void)
 #ifdef CONFIG_I2C_MXS
 	pin_unset_group(&i2c1_pins);
 #endif
+#ifdef CONFIG_IMX_SSP_MMC
 	pin_unset_group(&mmc0_pins);
 	pin_unset_group(&mmc1_pins);
+#endif
 	pin_unset_group(&userkey_pins);
 	serial_ports_deinit();
 }
