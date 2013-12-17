@@ -1,0 +1,7 @@
+--------------------
+U-Boot RELEASE NOTES
+--------------------
+
+v2013.01 - DUB-2.0.0.5, released on 2013/11/15
+	- Initial release for ccardimx28js
+	- Dual Boot yet unsupported

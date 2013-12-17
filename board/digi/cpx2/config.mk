@@ -1,0 +1,1 @@
+DIGI_BOARD = y
