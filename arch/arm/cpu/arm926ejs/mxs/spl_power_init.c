@@ -245,18 +245,9 @@ static void mxs_enable_4p2_dcdc_input(int xfer)
 				POWER_CTRL_ENIRQ_VDD5V_DROOP;
 
 	clrbits_le32(&power_regs->hw_power_5vctrl, POWER_5VCTRL_PWDN_5VBRNOUT);
-#ifdef CONFIG_NO_PSWITCH
-	/* Disable hardware poweroff on fast-falling edge of PSWITCH if not
-	 * used. This improves ESD immunity by removing
-	 * a source resets/power-cycling during ESD events.
-	 */
-	writel(POWER_RESET_UNLOCK_KEY | POWER_RESET_PWD_OFF |
-		POWER_RESET_FASTFALL_PSWITCH_OFF,
-		&power_regs->hw_power_reset);
-#else
+
 	writel(POWER_RESET_UNLOCK_KEY | POWER_RESET_PWD_OFF,
 		&power_regs->hw_power_reset);
-#endif
 
 	clrbits_le32(&power_regs->hw_power_ctrl, POWER_CTRL_ENIRQ_VDD5V_DROOP);
 
@@ -325,6 +316,15 @@ static void mxs_enable_4p2_dcdc_input(int xfer)
 		writel(POWER_RESET_UNLOCK_KEY | POWER_RESET_PWD_OFF,
 			&power_regs->hw_power_reset);
 	}
+
+#ifdef CONFIG_DISABLE_POWEROFF_ON_FASTFALL_PSWITCH
+	/* Disable hardware poweroff on fast-falling edge of PSWITCH if not
+	 * used. This improves ESD immunity by removing
+	 * a source resets/power-cycling during ESD events.
+	 */
+	writel(POWER_RESET_UNLOCK_KEY | POWER_RESET_FASTFALL_PSWITCH_OFF,
+		&power_regs->hw_power_reset_set);
+#endif
 
 	while (readl(&power_regs->hw_power_ctrl) & POWER_CTRL_VDD5V_DROOP_IRQ)
 		writel(POWER_CTRL_VDD5V_DROOP_IRQ,
