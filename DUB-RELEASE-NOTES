@@ -1,0 +1,12 @@
+-------------------------
+Digi U-Boot RELEASE NOTES
+-------------------------
+
+v2013.04 - DUB-2.1.0.3, released on 2014/03/27
+	- Initial release for ccimx6adpt, including:
+		- 'dboot' command
+		- 'update' command
+		- On-the-fly update from TFTP/MMC
+		- Auto bootscript from TFTP
+		- OCOTP support via 'fuse' command
+	- Dual Boot yet unsupported

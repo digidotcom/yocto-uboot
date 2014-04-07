@@ -1,0 +1,219 @@
+/*
+ * Digi ConnectPort X2 IOMUX setup
+ *
+ * Copyright (C) 2013 Digi International Inc.
+ *
+ * Based on ccardimx28.c:
+ * Copyright (C) 2013 Digi International
+ *
+ * See file CREDITS for list of people who contributed to this
+ * project.
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License as
+ * published by the Free Software Foundation; either version 2 of
+ * the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+#include <common.h>
+#include <config.h>
+#include <asm/io.h>
+#include <asm/arch/iomux-mx28.h>
+#include <asm/arch/imx-regs.h>
+#include <asm/arch/sys_proto.h>
+
+#define	MUX_CONFIG_SSP0	(MXS_PAD_3V3 | MXS_PAD_8MA | MXS_PAD_PULLUP)
+#define	MUX_CONFIG_GPMI	(MXS_PAD_3V3 | MXS_PAD_4MA | MXS_PAD_NOPULL)
+#define	MUX_CONFIG_ENET	(MXS_PAD_3V3 | MXS_PAD_8MA | MXS_PAD_PULLUP)
+#define	MUX_CONFIG_EMI	(MXS_PAD_1V8 | MXS_PAD_12MA | MXS_PAD_NOPULL)
+#define	MUX_CONFIG_SSP2	(MXS_PAD_3V3 | MXS_PAD_4MA | MXS_PAD_PULLUP)
+
+const iomux_cfg_t iomux_setup[] = {
+	/* DUART */
+	/* Unconfigure BOOT ROM default DUART */
+	MX28_PAD_PWM0__GPIO_3_16,
+	MX28_PAD_PWM1__GPIO_3_17,
+	/* Configure ccardimx28 DUART */
+	MX28_PAD_I2C0_SCL__DUART_RX,
+	MX28_PAD_I2C0_SDA__DUART_TX,
+
+	/* MMC0 */
+	MX28_PAD_SSP0_DATA0__SSP0_D0 | MUX_CONFIG_SSP0,
+	MX28_PAD_SSP0_DATA1__SSP0_D1 | MUX_CONFIG_SSP0,
+	MX28_PAD_SSP0_DATA2__SSP0_D2 | MUX_CONFIG_SSP0,
+	MX28_PAD_SSP0_DATA3__SSP0_D3 | MUX_CONFIG_SSP0,
+	MX28_PAD_SSP0_DATA4__SSP0_D4 | MUX_CONFIG_SSP0,
+	MX28_PAD_SSP0_DATA5__SSP0_D5 | MUX_CONFIG_SSP0,
+	MX28_PAD_SSP0_DATA6__SSP0_D6 | MUX_CONFIG_SSP0,
+	MX28_PAD_SSP0_DATA7__SSP0_D7 | MUX_CONFIG_SSP0,
+	MX28_PAD_SSP0_CMD__SSP0_CMD | MUX_CONFIG_SSP0,
+	/* Enable pull-up of pushbutton GPIO */
+	MX28_PAD_SSP0_SCK__GPIO_2_10 |
+		(MXS_PAD_12MA | MXS_PAD_3V3 | MXS_PAD_PULLUP),
+
+#ifdef CONFIG_NAND_MXS
+	/* GPMI NAND */
+	MX28_PAD_GPMI_D00__GPMI_D0 | MUX_CONFIG_GPMI,
+	MX28_PAD_GPMI_D01__GPMI_D1 | MUX_CONFIG_GPMI,
+	MX28_PAD_GPMI_D02__GPMI_D2 | MUX_CONFIG_GPMI,
+	MX28_PAD_GPMI_D03__GPMI_D3 | MUX_CONFIG_GPMI,
+	MX28_PAD_GPMI_D04__GPMI_D4 | MUX_CONFIG_GPMI,
+	MX28_PAD_GPMI_D05__GPMI_D5 | MUX_CONFIG_GPMI,
+	MX28_PAD_GPMI_D06__GPMI_D6 | MUX_CONFIG_GPMI,
+	MX28_PAD_GPMI_D07__GPMI_D7 | MUX_CONFIG_GPMI,
+	MX28_PAD_GPMI_CE0N__GPMI_CE0N |
+		(MXS_PAD_3V3 | MXS_PAD_4MA | MXS_PAD_PULLUP),
+	MX28_PAD_GPMI_RDY0__GPMI_READY0 |
+		(MXS_PAD_3V3 | MXS_PAD_4MA | MXS_PAD_PULLUP),
+	MX28_PAD_GPMI_RDN__GPMI_RDN |
+		(MXS_PAD_3V3 | MXS_PAD_8MA | MXS_PAD_NOPULL),
+	MX28_PAD_GPMI_WRN__GPMI_WRN |
+		(MXS_PAD_3V3 | MXS_PAD_8MA | MXS_PAD_NOPULL),
+	MX28_PAD_GPMI_ALE__GPMI_ALE | MUX_CONFIG_GPMI,
+	MX28_PAD_GPMI_CLE__GPMI_CLE | MUX_CONFIG_GPMI,
+	MX28_PAD_GPMI_RESETN__GPMI_RESETN | MUX_CONFIG_GPMI,
+#endif
+
+	/* FEC0 */
+	MX28_PAD_ENET0_MDC__ENET0_MDC | MUX_CONFIG_ENET,
+	MX28_PAD_ENET0_MDIO__ENET0_MDIO | MUX_CONFIG_ENET,
+	MX28_PAD_ENET0_RX_EN__ENET0_RX_EN | MUX_CONFIG_ENET,
+	MX28_PAD_ENET0_TX_EN__ENET0_TX_EN | MUX_CONFIG_ENET,
+	MX28_PAD_ENET0_RXD0__ENET0_RXD0 | MUX_CONFIG_ENET,
+	MX28_PAD_ENET0_RXD1__ENET0_RXD1 | MUX_CONFIG_ENET,
+	MX28_PAD_ENET0_TXD0__ENET0_TXD0 | MUX_CONFIG_ENET,
+	MX28_PAD_ENET0_TXD1__ENET0_TXD1 | MUX_CONFIG_ENET,
+	MX28_PAD_ENET_CLK__CLKCTRL_ENET | MUX_CONFIG_ENET,
+	/* FEC0 Reset */
+	MX28_PAD_PWM4__GPIO_3_29 |
+		(MXS_PAD_12MA | MXS_PAD_3V3 | MXS_PAD_PULLUP),
+
+	/* EMI */
+	MX28_PAD_EMI_D00__EMI_DATA0 | MUX_CONFIG_EMI,
+	MX28_PAD_EMI_D01__EMI_DATA1 | MUX_CONFIG_EMI,
+	MX28_PAD_EMI_D02__EMI_DATA2 | MUX_CONFIG_EMI,
+	MX28_PAD_EMI_D03__EMI_DATA3 | MUX_CONFIG_EMI,
+	MX28_PAD_EMI_D04__EMI_DATA4 | MUX_CONFIG_EMI,
+	MX28_PAD_EMI_D05__EMI_DATA5 | MUX_CONFIG_EMI,
+	MX28_PAD_EMI_D06__EMI_DATA6 | MUX_CONFIG_EMI,
+	MX28_PAD_EMI_D07__EMI_DATA7 | MUX_CONFIG_EMI,
+	MX28_PAD_EMI_D08__EMI_DATA8 | MUX_CONFIG_EMI,
+	MX28_PAD_EMI_D09__EMI_DATA9 | MUX_CONFIG_EMI,
+	MX28_PAD_EMI_D10__EMI_DATA10 | MUX_CONFIG_EMI,
+	MX28_PAD_EMI_D11__EMI_DATA11 | MUX_CONFIG_EMI,
+	MX28_PAD_EMI_D12__EMI_DATA12 | MUX_CONFIG_EMI,
+	MX28_PAD_EMI_D13__EMI_DATA13 | MUX_CONFIG_EMI,
+	MX28_PAD_EMI_D14__EMI_DATA14 | MUX_CONFIG_EMI,
+	MX28_PAD_EMI_D15__EMI_DATA15 | MUX_CONFIG_EMI,
+	MX28_PAD_EMI_ODT0__EMI_ODT0 | MUX_CONFIG_EMI,
+	MX28_PAD_EMI_DQM0__EMI_DQM0 | MUX_CONFIG_EMI,
+	MX28_PAD_EMI_ODT1__EMI_ODT1 | MUX_CONFIG_EMI,
+	MX28_PAD_EMI_DQM1__EMI_DQM1 | MUX_CONFIG_EMI,
+	MX28_PAD_EMI_DDR_OPEN_FB__EMI_DDR_OPEN_FEEDBACK | MUX_CONFIG_EMI,
+	MX28_PAD_EMI_CLK__EMI_CLK | MUX_CONFIG_EMI,
+	MX28_PAD_EMI_DQS0__EMI_DQS0 | MUX_CONFIG_EMI,
+	MX28_PAD_EMI_DQS1__EMI_DQS1 | MUX_CONFIG_EMI,
+	MX28_PAD_EMI_DDR_OPEN__EMI_DDR_OPEN | MUX_CONFIG_EMI,
+
+	MX28_PAD_EMI_A00__EMI_ADDR0 | MUX_CONFIG_EMI,
+	MX28_PAD_EMI_A01__EMI_ADDR1 | MUX_CONFIG_EMI,
+	MX28_PAD_EMI_A02__EMI_ADDR2 | MUX_CONFIG_EMI,
+	MX28_PAD_EMI_A03__EMI_ADDR3 | MUX_CONFIG_EMI,
+	MX28_PAD_EMI_A04__EMI_ADDR4 | MUX_CONFIG_EMI,
+	MX28_PAD_EMI_A05__EMI_ADDR5 | MUX_CONFIG_EMI,
+	MX28_PAD_EMI_A06__EMI_ADDR6 | MUX_CONFIG_EMI,
+	MX28_PAD_EMI_A07__EMI_ADDR7 | MUX_CONFIG_EMI,
+	MX28_PAD_EMI_A08__EMI_ADDR8 | MUX_CONFIG_EMI,
+	MX28_PAD_EMI_A09__EMI_ADDR9 | MUX_CONFIG_EMI,
+	MX28_PAD_EMI_A10__EMI_ADDR10 | MUX_CONFIG_EMI,
+	MX28_PAD_EMI_A11__EMI_ADDR11 | MUX_CONFIG_EMI,
+	MX28_PAD_EMI_A12__EMI_ADDR12 | MUX_CONFIG_EMI,
+	MX28_PAD_EMI_A13__EMI_ADDR13 | MUX_CONFIG_EMI,
+	MX28_PAD_EMI_A14__EMI_ADDR14 | MUX_CONFIG_EMI,
+	MX28_PAD_EMI_BA0__EMI_BA0 | MUX_CONFIG_EMI,
+	MX28_PAD_EMI_BA1__EMI_BA1 | MUX_CONFIG_EMI,
+	MX28_PAD_EMI_BA2__EMI_BA2 | MUX_CONFIG_EMI,
+	MX28_PAD_EMI_CASN__EMI_CASN | MUX_CONFIG_EMI,
+	MX28_PAD_EMI_RASN__EMI_RASN | MUX_CONFIG_EMI,
+	MX28_PAD_EMI_WEN__EMI_WEN | MUX_CONFIG_EMI,
+	MX28_PAD_EMI_CE0N__EMI_CE0N | MUX_CONFIG_EMI,
+	MX28_PAD_EMI_CE1N__EMI_CE1N | MUX_CONFIG_EMI,
+	MX28_PAD_EMI_CKE__EMI_CKE | MUX_CONFIG_EMI,
+};
+
+uint32_t mxs_mem_get_size(void)
+{
+	return 0x04000000;	/* 64 MiB */
+}
+
+void mxs_adjust_memory_params(uint32_t *dram_vals)
+{
+	/* 64 MiB SDRAM (MT47H64M16-25E) */
+
+	/* Enable CS0; 10 bit col addr, 13 addr pins, auto precharge=A10 */
+	dram_vals[29] = 0x0102020a;
+
+	dram_vals[31] = 0x00000101;	/* 4 bank mode */
+
+	/* EMI freq = 130.9 MHz, cycle=7.638ns */
+	/* tDAL=tWR+tRP=15ns+12.5ns=27.5ns/7.638ns=0x4, CPD=400ns/7.638ns=0x35,
+	 * TCKE=3 */
+	dram_vals[38] = 0x04003503;
+	/* tFAW=45ns/7.638ns=0x6, DLL reset recovery (lock) time = 200 cycles */
+	dram_vals[39] = 0x060000c8;
+	/* TMRD=2, TINIT=200us/7.638ns=0x6646 - see init timing diagram
+	 * (note 3) */
+	dram_vals[40] = 0x02006646;
+	/* TPDEX=tXP=2, tRCD=15ns/7.638ns=2, tRC=57.5/7.638ns=0x8 */
+	dram_vals[41] = 0x00020208;
+	/* TRAS_max=floor(70000ns/7.638ns)=0x23CB, TRAS_min=40ns/7.638ns=0x6 */
+	dram_vals[42] = 0x0023cb06;
+	/* tRP=12.5ns/7.638ns=2, tRFC(512Mb)=105ns/7.638ns=0x0E,
+	 * tREFIit=floor(3900ns/7.638ns)=0x1FE (32ms refresh) */
+	dram_vals[43] = 0x020e01fe;
+	/* tWTR=7.5ns/7.638ns=1 -> 2 (min. 2), tWR=15ns/7.638ns=2
+	 * tRTP=7.5ns/7.638ns=1 -> 2 (min. 2) tRRD(x16)=10ns/7.638ns=2 */
+	dram_vals[44] = 0x02020202;
+	/* TSXR=tXSRDmin=200, TXSNR=tXSNR=tRFC(512Mb)+10ns=115ns/7.638ns=0x10 */
+	dram_vals[45] = 0x00c80010;
+
+	dram_vals[66] = 0x00000409;	/* EVK   value */
+	dram_vals[67] = 0x01000102;	/* Enable CS0 clock only */
+	dram_vals[68] = 0x04090409;	/* EVK   value */
+	dram_vals[70] = 0x00020006;	/* EVK   value */
+	dram_vals[73] = 0x00000000;
+	dram_vals[74] = 0x00000000;
+	/* EVK   value - bit 22 is usually set by FSL, but not in 200Mhz case;
+	 * assume a typo and correct it */
+	dram_vals[75] = 0x07400300;
+	dram_vals[76] = 0x07400300;
+	dram_vals[77] = 0x00000000;
+	dram_vals[78] = 0x00000000;
+	dram_vals[83] = 0x00000000;	/* Disable CS0 ODT during reads */
+	/* Enable  CS0 ODT during writes to CS0 */
+	dram_vals[84] = 0x00000001;
+
+	dram_vals[164] = 0x00000002;	/* TMOD=tMRD=2 cycles */
+
+	/* TCCD=2, TRPA=tRPA(<1Gb)=12.5ns/7.638ns=2, CKSRX/CKSRE=1
+	 * (see pg 115, note 1) */
+	dram_vals[177] = 0x02020101;
+	dram_vals[179] = 0x00040900;	/* EVK   value (may be read-only?) */
+	dram_vals[180] = 0x04090409;	/* EVK   value (may be read-only?) */
+	/* MR0 settings for CS0: WR=2 (15ns/7.638ns=2), CASLat=4,
+	 * Sequential, BurstLength=4 */
+	dram_vals[181] = 0x00000242;
+	/* MR1 settings for CS0: 75ohm ODT nominal, Full drive strength */
+	dram_vals[183] = 0x00000004;
+	dram_vals[185] = 0x00000080;	/* MR3 settings for CS0: */
+}
+
+void board_init_ll(void)
+{
+	mxs_common_spl_init(iomux_setup, ARRAY_SIZE(iomux_setup));
+}
