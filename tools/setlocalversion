@@ -16,15 +16,15 @@ if head=`git rev-parse --verify HEAD 2>/dev/null`; then
 	# Do we have an untagged version?
 	if git name-rev --tags HEAD | \
 	   grep -E '^HEAD[[:space:]]+(.*~[0-9]*|undefined)$' > /dev/null; then
-		dub_sha1="$(git describe | awk -F- '{printf("%s", $(NF))}')"
-		printf ' - %s-%s' ${dub_ver} ${dub_sha1}
+		dub_sha1="$(git rev-parse --short=7 HEAD)"
+		printf ' - %s-g%s' ${dub_ver} ${dub_sha1}
 	# Do we have a DUB tag?
 	elif dub_tag="$(git describe --tags --exact-match --match 'DUB-*' 2>/dev/null)"; then
 		printf ' - %s' ${dub_tag}
 	# For no DUB tags print the SHA1
 	else
-		dub_sha1="$(git describe | awk -F- '{printf("%s", $(NF))}')"
-		printf ' - %s-%s' ${dub_ver} ${dub_sha1}
+		dub_sha1="$(git rev-parse --short=7 HEAD)"
+		printf ' - %s-g%s' ${dub_ver} ${dub_sha1}
 	fi
 
 	# Are there uncommitted changes?

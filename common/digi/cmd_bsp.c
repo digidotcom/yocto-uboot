@@ -480,7 +480,7 @@ static int do_image_load(int iLoadAddr, image_source_e source,
 	case IS_SATA:
 		sprintf(cmd, "%s %s 0x%x %s", loadcmd, part, iLoadAddr, img);
 		if (len)
-			sprintf(cmd, "%s %d", cmd, len);
+			sprintf(cmd, "%s 0x%x", cmd, len);
 		break;
 	case IS_TFTP:
 		sprintf(cmd, "tftp 0x%x %s", iLoadAddr, img);
@@ -3024,6 +3024,10 @@ U_BOOT_CMD(
 	"      source=tftp|nfs -> [filename]\n"
 	"       - filename: file to transfer (required if using a partition name)\n"
 	"\n"
+	"      source=flash -> [rootfs_part]\n"
+	"       - rootfs_part: the partition name that holds the desired rootfs.\n"
+	"                      If omitted, the first rootfs partition will be used.\n"
+	"\n"
 	"      source=usb|mmc|hsmmc|sata -> [device:part filesystem] [filename] [rootfspart]\n"
 	"       - device:part: number of device and partition\n"
 	"       - filesystem: fat|vfat|ext2|ext3\n"
@@ -3400,12 +3404,14 @@ int generate_dynamic_vars(void)
 
 void generate_prompt(void)
 {
+#ifndef CONFIG_UBOOT_PROMPT_STR
 	extern char sys_prompt[];
 	char temp[PATH_MAXLEN];
 
 	sprintf(temp, "%s %s ", convert2upper(modulename),
 		CONFIG_PROMPT_SEPARATOR);
 	strncpy(sys_prompt, temp, CONFIG_PROMPT_MAXLEN);
+#endif
 }
 
 /* This is a function that is called early after doing the low
