@@ -58,8 +58,9 @@ scm_version()
 				echo "+"
 				return
 			fi
-			dub_sha1="$(git describe | awk -F- '{printf("%s", $(NF))}')"
-			printf ' - %s-%s' ${dub_ver} ${dub_sha1}
+			# For no DUB tags print the SHA1
+			dub_sha1="$(git rev-parse --short=7 HEAD)"
+			printf ' - %s-g%s' ${dub_ver} ${dub_sha1}
 		fi
 
 		# Is this git on svn?

@@ -20,15 +20,15 @@ extern void register_mmc_otf_update_hook(int (*hook)(otf_data_t *oftd),
 					  disk_partition_t*);
 extern void unregister_mmc_otf_update_hook(void);
 
-void register_otf_hook(int src, int (*hook)(otf_data_t *oftd),
+int register_otf_hook(int src, int (*hook)(otf_data_t *oftd),
 		       disk_partition_t *partition)
 {
 	switch (src) {
 	case SRC_TFTP:
 		register_tftp_otf_update_hook(hook, partition);
-		break;
+		return 1;
 	case SRC_MMC:
-		register_mmc_otf_update_hook(hook, partition);
+		//register_mmc_otf_update_hook(hook, partition);
 		break;
 	case SRC_USB:
 	case SRC_SATA:
@@ -36,6 +36,8 @@ void register_otf_hook(int src, int (*hook)(otf_data_t *oftd),
 		//TODO
 		break;
 	}
+
+	return 0;
 }
 
 void unregister_otf_hook(int src)
@@ -45,7 +47,7 @@ void unregister_otf_hook(int src)
 		unregister_tftp_otf_update_hook();
 		break;
 	case SRC_MMC:
-		unregister_mmc_otf_update_hook();
+		//unregister_mmc_otf_update_hook();
 		break;
 	case SRC_USB:
 	case SRC_SATA:
@@ -194,24 +196,25 @@ static int do_update(cmd_tbl_t* cmdtp, int flag, int argc, char * const argv[])
 	}
 
 	/* Activate on-the-fly update if needed */
-	otf = (getenv_yesno("otf-update") == 1);
-	if (otf) {
+	if (getenv_yesno("otf-update") == 1) {
 		if (!strcmp((char *)info.name, "uboot")) {
 			/* Do not activate on-the-fly update for U-Boot */
 			printf("On-the-fly mechanism disabled for U-Boot "
 				"for security reasons\n");
-			otf = 0;
 		} else {
 			/* register on-the-fly update mechanism */
-			register_otf_hook(src, board_update_chunk, &info);
-			/* Prepare command to change to storage device */
-			sprintf(cmd, "mmc dev %d", CONFIG_SYS_STORAGE_DEV);
-			/* Change to storage device */
-			if (run_command(cmd, 0)) {
-				printf("Cannot change to storage device\n");
-				ret = -1;
-				goto _ret;
-			}
+			otf = register_otf_hook(src, board_update_chunk, &info);
+		}
+	}
+
+	if (otf) {
+		/* Prepare command to change to storage device */
+		sprintf(cmd, "mmc dev %d", CONFIG_SYS_STORAGE_DEV);
+		/* Change to storage device */
+		if (run_command(cmd, 0)) {
+			printf("Cannot change to storage device\n");
+			ret = -1;
+			goto _ret;
 		}
 	}
 

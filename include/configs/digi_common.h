@@ -78,6 +78,8 @@
 
 #define CONFIG_DEFAULT_NETWORK_SETTINGS	\
 	"ethaddr=00:04:f3:ff:ff:fa\0" \
+	"wlanaddr=00:04:f3:ff:ff:fb\0" \
+	"btaddr=00:04:f3:ff:ff:fc\0" \
 	"ipaddr=192.168.42.30\0" \
 	"serverip=192.168.42.1\0" \
 	"netmask=255.255.0.0\0"

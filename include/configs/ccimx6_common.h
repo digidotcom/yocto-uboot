@@ -35,6 +35,7 @@
 
 /* Size of malloc() pool */
 #define CONFIG_SYS_MALLOC_LEN		(CONFIG_ENV_SIZE + 2 * 1024 * 1024)
+#define CONFIG_SYS_L2CACHE_OFF
 
 #define CONFIG_BOARD_EARLY_INIT_F
 #define CONFIG_BOARD_LATE_INIT
@@ -54,6 +55,7 @@
 #define CONFIG_BOUNCE_BUFFER
 #define CONFIG_CMD_EXT2
 #define CONFIG_CMD_FAT
+#define CONFIG_FAT_WRITE
 #define CONFIG_DOS_PARTITION
 #define CONFIG_EFI_PARTITION
 #define CONFIG_CMD_GPT
@@ -68,6 +70,7 @@
 #define CONFIG_MII
 #define IMX_FEC_BASE			ENET_BASE_ADDR
 #define CONFIG_ETHPRIME			"FEC"
+#define CONFIG_NO_MAC_FROM_OTP
 
 #define CONFIG_PHYLIB
 
@@ -245,7 +248,8 @@
 		"\"\0" \
 	"android_file=boot.img\0" \
 	"system_file=system.img\0" \
-	"partition_mmc_android=mmc dev ${mmcdev} 0;" \
+	"partition_mmc_android=mmc rescan;" \
+		"if mmc dev ${mmcdev} 0;then;else mmc dev ${mmcdev};fi;" \
 		"gpt write mmc ${mmcdev} ${parts_android};" \
 		"mmc rescan\0" \
 	"bootargs_android=\"androidboot.console=ttymxc0 " \
@@ -286,7 +290,8 @@
 		"\"\0" \
 	"linux_file=dey-image-graphical-ccimx6adpt.boot.vfat\0" \
 	"rootfs_file=dey-image-graphical-ccimx6adpt.rootfs.ext4\0" \
-	"partition_mmc_linux=mmc dev ${mmcdev} 0;" \
+	"partition_mmc_linux=mmc rescan;" \
+		"if mmc dev ${mmcdev} 0;then;else mmc dev ${mmcdev};fi;" \
 		"gpt write mmc ${mmcdev} ${parts_linux};" \
 		"mmc rescan\0" \
 	"video0=dev=ldb,LDB-HSD101PFW2,bpp=32\0" \

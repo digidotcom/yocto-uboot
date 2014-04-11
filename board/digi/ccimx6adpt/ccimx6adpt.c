@@ -45,12 +45,15 @@
 #ifdef CONFIG_PLATFORM_HAS_HWID
 #include "../common/hwid.h"
 #endif
+#include "../../../drivers/net/fec_mxc.h"
 
 DECLARE_GLOBAL_DATA_PTR;
 
 struct ccimx6_hwid my_hwid;
 static u8 hwid[4 * CONFIG_HWID_WORDS_NUMBER];
 static block_dev_desc_t *mmc_dev;
+static int enet_xcv_type;
+static int phy_addr;
 
 #define UART_PAD_CTRL  (PAD_CTL_PKE | PAD_CTL_PUE |            \
 	PAD_CTL_PUS_100K_UP | PAD_CTL_SPEED_MED |               \
@@ -116,10 +119,26 @@ iomux_v3_cfg_t const uart1_pads[] = {
 	MX6_PAD_SD3_DAT6__UART1_RXD | MUX_PAD_CTRL(UART_PAD_CTRL),
 };
 
-iomux_v3_cfg_t const enet_pads[] = {
+iomux_v3_cfg_t const enet_pads_100[] = {
 	MX6_PAD_ENET_MDIO__ENET_MDIO		| MUX_PAD_CTRL(ENET_PAD_CTRL),
 	MX6_PAD_ENET_MDC__ENET_MDC		| MUX_PAD_CTRL(ENET_PAD_CTRL),
-#if defined(CONFIG_PHY_MICREL)
+	MX6_PAD_ENET_TXD0__ENET_TDATA_0		| MUX_PAD_CTRL(ENET_PAD_CTRL),
+	MX6_PAD_ENET_TXD1__ENET_TDATA_1		| MUX_PAD_CTRL(ENET_PAD_CTRL),
+	MX6_PAD_ENET_RXD0__ENET_RDATA_0		| MUX_PAD_CTRL(ENET_PAD_CTRL),
+	MX6_PAD_ENET_RXD1__ENET_RDATA_1		| MUX_PAD_CTRL(ENET_PAD_CTRL),
+	MX6_PAD_RGMII_TX_CTL__ENET_REF_CLK	| MUX_PAD_CTRL(ENET_PAD_CTRL),
+	MX6_PAD_ENET_RX_ER__ENET_RX_ER		| MUX_PAD_CTRL(ENET_PAD_CTRL),
+	MX6_PAD_ENET_TX_EN__ENET_TX_EN		| MUX_PAD_CTRL(ENET_PAD_CTRL),
+	MX6_PAD_ENET_CRS_DV__ENET_RX_EN		| MUX_PAD_CTRL(ENET_PAD_CTRL),
+	/* SMSC LAN8710 PHY reset */
+	MX6_PAD_RGMII_RX_CTL__GPIO_6_24		| MUX_PAD_CTRL(NO_PAD_CTRL),
+	/* SMSC LAN8710 PHY interrupt */
+	MX6_PAD_ENET_REF_CLK__GPIO_1_23		| MUX_PAD_CTRL(NO_PAD_CTRL),
+};
+
+iomux_v3_cfg_t const enet_pads_1000[] = {
+	MX6_PAD_ENET_MDIO__ENET_MDIO		| MUX_PAD_CTRL(ENET_PAD_CTRL),
+	MX6_PAD_ENET_MDC__ENET_MDC		| MUX_PAD_CTRL(ENET_PAD_CTRL),
 	MX6_PAD_RGMII_TXC__ENET_RGMII_TXC	| MUX_PAD_CTRL(ENET_PAD_CTRL),
 	MX6_PAD_RGMII_TD0__ENET_RGMII_TD0	| MUX_PAD_CTRL(ENET_PAD_CTRL),
 	MX6_PAD_RGMII_TD1__ENET_RGMII_TD1	| MUX_PAD_CTRL(ENET_PAD_CTRL),
@@ -135,40 +154,54 @@ iomux_v3_cfg_t const enet_pads[] = {
 	MX6_PAD_ENET_REF_CLK__ENET_TX_CLK	| MUX_PAD_CTRL(ENET_PAD_CTRL),
 	/* Micrel KSZ9031 PHY reset */
 	MX6_PAD_ENET_CRS_DV__GPIO_1_25		| MUX_PAD_CTRL(NO_PAD_CTRL),
-#elif defined(CONFIG_PHY_SMSC)
-	MX6_PAD_ENET_TXD0__ENET_TDATA_0		| MUX_PAD_CTRL(ENET_PAD_CTRL),
-	MX6_PAD_ENET_TXD1__ENET_TDATA_1		| MUX_PAD_CTRL(ENET_PAD_CTRL),
-	MX6_PAD_ENET_RXD0__ENET_RDATA_0		| MUX_PAD_CTRL(ENET_PAD_CTRL),
-	MX6_PAD_ENET_RXD1__ENET_RDATA_1		| MUX_PAD_CTRL(ENET_PAD_CTRL),
-	MX6_PAD_RGMII_TX_CTL__ENET_REF_CLK	| MUX_PAD_CTRL(ENET_PAD_CTRL),
-	MX6_PAD_ENET_RX_ER__ENET_RX_ER		| MUX_PAD_CTRL(ENET_PAD_CTRL),
-	MX6_PAD_ENET_TX_EN__ENET_TX_EN		| MUX_PAD_CTRL(ENET_PAD_CTRL),
-	MX6_PAD_ENET_CRS_DV__ENET_RX_EN		| MUX_PAD_CTRL(ENET_PAD_CTRL),
-	/* SMSC LAN8710 PHY reset */
-	MX6_PAD_RGMII_RX_CTL__GPIO_6_24		| MUX_PAD_CTRL(NO_PAD_CTRL),
-	/* SMSC LAN8710 PHY interrupt */
-	MX6_PAD_ENET_REF_CLK__GPIO_1_23		| MUX_PAD_CTRL(NO_PAD_CTRL),
-#endif
 };
-
-#if defined(CONFIG_PHY_MICREL)
-#define CONFIG_PHY_RESET_GPIO		IMX_GPIO_NR(1, 25)
-#elif defined(CONFIG_PHY_SMSC)
-#define CONFIG_PHY_RESET_GPIO		IMX_GPIO_NR(6, 24)
-#endif
 
 static void setup_iomux_enet(void)
 {
-	imx_iomux_v3_setup_multiple_pads(enet_pads, ARRAY_SIZE(enet_pads));
+	int enet;
+	int phy_reset_gpio;
+	iomux_v3_cfg_t const *enet_pads;
+	int npads;
+
+	/* iomux for Gigabit or 10/100 and PHY selection
+	 * basing on env variable 'ENET'. Default to Gigabit.
+	 */
+	enet = (int)getenv_ulong("ENET", 10, 1000);
+	if (enet == 100) {
+		/* 10/100 ENET (SMSC PHY) */
+		phy_reset_gpio = IMX_GPIO_NR(6, 24);
+		enet_pads = enet_pads_100;
+		npads = ARRAY_SIZE(enet_pads_100);
+		enet_xcv_type = RMII;
+		phy_addr = CONFIG_ENET_PHYADDR_SMSC;
+	} else {
+		/* Gigabit ENET (Micrel PHY) */
+		phy_reset_gpio = IMX_GPIO_NR(1, 25);
+		enet_pads = enet_pads_1000;
+		npads = ARRAY_SIZE(enet_pads_1000);
+		enet_xcv_type = RGMII;
+		phy_addr = CONFIG_ENET_PHYADDR_MICREL;
+	}
+	imx_iomux_v3_setup_multiple_pads(enet_pads, npads);
 
 	/* Assert PHY reset */
-	gpio_direction_output(CONFIG_PHY_RESET_GPIO , 0);
+	gpio_direction_output(phy_reset_gpio , 0);
 	/* Need 10ms to guarantee stable voltages */
 	udelay(10 * 1000);
 	/* Deassert PHY reset */
-	gpio_set_value(CONFIG_PHY_RESET_GPIO, 1);
+	gpio_set_value(phy_reset_gpio, 1);
 	/* Need to wait 100us before accessing the MIIM (MDC/MDIO) */
 	udelay(100);
+}
+
+int board_get_enet_xcv_type(void)
+{
+	return enet_xcv_type;
+}
+
+int board_get_enet_phy_addr(void)
+{
+	return phy_addr;
 }
 
 static void setup_iomux_uart(void)

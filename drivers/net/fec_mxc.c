@@ -24,6 +24,7 @@
 #include <common.h>
 #include <malloc.h>
 #include <net.h>
+#include <netdev.h>
 #include <miiphy.h>
 #include "fec_mxc.h"
 
@@ -43,10 +44,6 @@ DECLARE_GLOBAL_DATA_PTR;
 
 #ifndef CONFIG_MII
 #error "CONFIG_MII has to be defined!"
-#endif
-
-#ifndef CONFIG_FEC_XCV_TYPE
-#define CONFIG_FEC_XCV_TYPE MII100
 #endif
 
 /*
@@ -372,7 +369,11 @@ static void fec_rbd_clean(int last, struct fec_bd *pRbd)
 static int fec_get_hwaddr(struct eth_device *dev, int dev_id,
 						unsigned char *mac)
 {
+#ifdef CONFIG_NO_MAC_FROM_OTP
+	memset(mac, 0, 6);
+#else
 	imx_get_mac_from_fuse(dev_id, mac);
+#endif
 	return !is_valid_ether_addr(mac);
 }
 
@@ -927,6 +928,11 @@ static void fec_set_dev_name(char *dest, int dev_id)
 	sprintf(dest, (dev_id == -1) ? "FEC" : "FEC%i", dev_id);
 }
 
+int __weak board_get_enet_xcv_type(void)
+{
+	return MII100;
+}
+
 #ifdef CONFIG_PHYLIB
 int fec_probe(bd_t *bd, int dev_id, uint32_t base_addr,
 		struct mii_dev *bus, struct phy_device *phydev)
@@ -978,7 +984,11 @@ static int fec_probe(bd_t *bd, int dev_id, uint32_t base_addr,
 	fec->eth = (struct ethernet_regs *)base_addr;
 	fec->bd = bd;
 
+#ifdef CONFIG_FEC_XCV_TYPE
 	fec->xcv_type = CONFIG_FEC_XCV_TYPE;
+#else
+	fec->xcv_type = board_get_enet_xcv_type();
+#endif
 
 	/* Reset chip. */
 	writel(readl(&fec->eth->ecntrl) | FEC_ECNTRL_RESET, &fec->eth->ecntrl);
@@ -1086,13 +1096,16 @@ int fecmxc_initialize_multi(bd_t *bd, int dev_id, int phy_id, uint32_t addr)
 	return ret;
 }
 
-#ifdef CONFIG_FEC_MXC_PHYADDR
 int fecmxc_initialize(bd_t *bd)
 {
+#ifdef CONFIG_FEC_MXC_PHYADDR
 	return fecmxc_initialize_multi(bd, -1, CONFIG_FEC_MXC_PHYADDR,
 			IMX_FEC_BASE);
-}
+#else
+	return fecmxc_initialize_multi(bd, -1, board_get_enet_phy_addr(),
+			IMX_FEC_BASE);
 #endif
+}
 
 #ifndef CONFIG_PHYLIB
 int fecmxc_register_mii_postcall(struct eth_device *dev, int (*cb)(int))

@@ -40,16 +40,10 @@
 /* Media type for firmware updates */
 #define CONFIG_SYS_STORAGE_MEDIA	"mmc"
 
-/* Ethernet PHY (select one) */
+/* Ethernet PHY */
 #define CONFIG_PHY_MICREL
-//#define CONFIG_PHY_SMSC
-
-#if defined(CONFIG_PHY_MICREL)
-#define CONFIG_FEC_MXC_PHYADDR		3
-#define CONFIG_FEC_XCV_TYPE		RGMII
-#elif defined(CONFIG_PHY_SMSC)
-#define CONFIG_FEC_MXC_PHYADDR		0
-#define CONFIG_FEC_XCV_TYPE		RMII
-#endif
+#define CONFIG_ENET_PHYADDR_MICREL	3
+#define CONFIG_PHY_SMSC
+#define CONFIG_ENET_PHYADDR_SMSC	0
 
 #endif                         /* __CCIMX6ADPT_CONFIG_H */

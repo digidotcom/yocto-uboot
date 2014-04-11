@@ -40,6 +40,14 @@
 int board_eth_init(bd_t *bis);
 int cpu_eth_init(bd_t *bis);
 
+/* Board functions to determine PHY transceiver type and address */
+#ifndef CONFIG_FEC_XCV_TYPE
+int board_get_enet_xcv_type(void);
+#endif
+#ifndef CONFIG_FEC_MXC_PHYADDR
+int board_get_enet_phy_addr(void);
+#endif
+
 /* Driver initialization prototypes */
 int altera_tse_initialize(u8 dev_num, int mac_base,
 			  int sgdma_rx_base, int sgdma_tx_base,
