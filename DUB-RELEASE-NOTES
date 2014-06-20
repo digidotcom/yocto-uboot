@@ -2,6 +2,11 @@
 U-Boot RELEASE NOTES
 --------------------
 
+v2013.01 - DUB-2.0.1.1, released on 2014/04/14
+        - Added support for Micrel PHY KSZ8081RNA on i.MX28
+          based platforms.
+
+
 v2013.01 - DUB-2.0.0.5, released on 2013/11/15
 	- Initial release for ccardimx28js
 	- Dual Boot yet unsupported

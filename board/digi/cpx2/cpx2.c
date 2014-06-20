@@ -83,7 +83,11 @@ int board_mmc_init(bd_t *bis)
 
 #ifdef	CONFIG_CMD_NET
 
+#define KSZ80x1_ANEG_ADVERT		0x04
+#define NEXT_PAGE			(1 << 15)
+
 #define KSZ80x1_OPMODE_STRAPOV		0x16
+#define BCAST_OFF			(1 << 9)
 
 #define MII_PHY_CTRL2			0x1f
 #define HP_AUTO_MDI			(1 << 15)
@@ -93,27 +97,30 @@ int board_mmc_init(bd_t *bis)
 int fecmxc_mii_postcall(int phy)
 {
 	unsigned short val;
+	char phyname[4];
 
-	if (phy == 0)
-		miiphy_write("FEC0", phy, MII_PHY_CTRL2,
-			     HP_AUTO_MDI | ENABLE_JABBER_COUNTER |
-			     RMII_50MHZ_CLOCK);
-	if (phy == 3) {
-		miiphy_write("FEC1", phy, MII_PHY_CTRL2,
-			     HP_AUTO_MDI | ENABLE_JABBER_COUNTER |
-			     RMII_50MHZ_CLOCK);
-		/*
-		 * Set bit 9 of register 0x16 (undocumented) to work
-		 * around Micrel PHY bug that causes the second PHY, with
-		 * address=3, to also respond to reads/writes addressed
-		 * to the first PHY, which has address=0.
-		 * The setting of this bit for platforms having only
-		 * one PHY at address 0 is harmless.
-		 */
-		if (!miiphy_read("FEC1", phy, KSZ80x1_OPMODE_STRAPOV, &val))
-			miiphy_write("FEC1", phy, KSZ80x1_OPMODE_STRAPOV,
-				     (1 << 9));
-	}
+	sprintf(phyname, "FEC%d", phy ? 1 : 0);
+	miiphy_write(phyname, phy, MII_PHY_CTRL2,
+		     HP_AUTO_MDI | ENABLE_JABBER_COUNTER |
+		     RMII_50MHZ_CLOCK);
+
+	/*
+	 * Set bit 9 of register 0x16 (undocumented) to work
+	 * around Micrel PHY bug that causes the second PHY, with
+	 * address=3, to also respond to reads/writes addressed
+	 * to the first PHY, which has address=0.
+	 * The setting of this bit for platforms having only
+	 * one PHY at address 0 is harmless.
+	 */
+	if (!miiphy_read(phyname, phy, KSZ80x1_OPMODE_STRAPOV, &val))
+		miiphy_write(phyname, phy, KSZ80x1_OPMODE_STRAPOV,
+			     val | BCAST_OFF);
+
+	/* Clear Next Page capable bit (set by default on KSZ8081RNA) */
+	if (!miiphy_read(phyname, phy, KSZ80x1_ANEG_ADVERT, &val))
+		miiphy_write(phyname, phy, KSZ80x1_ANEG_ADVERT,
+			     val & ~NEXT_PAGE);
+
 	return 0;
 }
 
