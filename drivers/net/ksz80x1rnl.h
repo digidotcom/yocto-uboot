@@ -11,13 +11,18 @@
 #define __KSZ80X1RNL_H
 
 #define PHY_ID_KSZ80x1RNL	0x00221550
+#define PHY_ID_KSZ8081RNA	0x00221560
 
-/* KSZ80x1RNL registers */
+/* KSZ80x1 registers */
+#define KSZ80x1_ANEG_ADVERT	0x04
 #define KSZ80x1_OPMODE_STRAPOV	0x16
 #define KSZ80x1_INT_CTRLSTAT	0x1B
 #define KSZ80x1_LINKMD_CTRLSTAT	0x1D
 #define KSZ80x1_PHY_CTRL1	0x1E
 #define KSZ80x1_PHY_CTRL2	0x1F
+
+/* KSZ80x1_ANEG_ADVERT */
+#define NEXT_PAGE		(1 << 15)
 
 /* KSZ80x1_PHY_CTRL2 */
 #define HP_AUTO_MDI		(1 << 15)
@@ -32,5 +37,8 @@
 #define DISABLE_TRANSMITTER	(1 << 3)
 #define ENABLE_REMOTE_LOOPBACK	(1 << 2)
 #define DISABLE_SCRAMBLER	(1 << 0)
+
+/* KSZ80x1_PHY_OPMODE_STRAPOV */
+#define BCAST_OFF		(1 << 9)
 
 #endif /* __KSZ80X1RNL_H */

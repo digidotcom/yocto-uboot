@@ -232,9 +232,11 @@ static void mxc_fec_mii_init(struct eth_device *dev)
 	if (!miiphy_info(dev->name, info->phy_addr, &oui, &model, &rev)) {
 		phy_id = (oui << 10) | (model << 4);
 #ifdef CONFIG_PHY_CLOCK
-		/* Configure Micrel KSZ8021RNL PHY Control 2 for 50MHz */
-		if (PHY_ID_KSZ80x1RNL == phy_id &&
-		    50000000 == CONFIG_PHY_CLOCK) {
+		/* Configure Micrel KSZ80x1RNL and KSZ8081RNA PHY Control 2
+		 * for 50MHz */
+		if ((PHY_ID_KSZ80x1RNL == phy_id ||
+		     PHY_ID_KSZ8081RNA == phy_id) &&
+		     (50000000 == CONFIG_PHY_CLOCK)) {
 			miiphy_write (dev->name,
 				      info->phy_addr,
 				      KSZ80x1_PHY_CTRL2,
@@ -244,21 +246,28 @@ static void mxc_fec_mii_init(struct eth_device *dev)
 #endif
 	}
 
-	/* Set bit 9 of register 0x16 (undocumented) to work
-	 * around Micrel PHY bug that causes the second PHY, with
-	 * address=3, to also respond to reads/writes addressed
-	 * to the first PHY, which has address=0.
-	 * The setting of this bit for platforms having only
-	 * one PHY at address 0 is harmless.
-	 */
-	if (PHY_ID_KSZ80x1RNL == phy_id) {
+	if (PHY_ID_KSZ80x1RNL == phy_id ||
+	    PHY_ID_KSZ8081RNA == phy_id) {
+		/* Set bit 9 of register 0x16 (undocumented) to work
+		 * around Micrel PHY bug that causes the second PHY, with
+		 * address=3, to also respond to reads/writes addressed
+		 * to the first PHY, which has address=0.
+		 * The setting of this bit for platforms having only
+		 * one PHY at address 0 is harmless.
+		 */
 		if (!miiphy_read(dev->name, info->phy_addr, KSZ80x1_OPMODE_STRAPOV,
 				 &val)) {
 			miiphy_write (dev->name,
 				      info->phy_addr,
 				      KSZ80x1_OPMODE_STRAPOV,
-				      val | (1 << 9));
+				      val | BCAST_OFF);
 		}
+
+		/* Clear Next page capable bit (set by default on KSZ8081RNA) */
+		if (!miiphy_read(dev->name, info->phy_addr,
+				 KSZ80x1_ANEG_ADVERT, &val))
+			miiphy_write (dev->name, info->phy_addr,
+				      KSZ80x1_ANEG_ADVERT, val & ~NEXT_PAGE);
 	}
 }
 

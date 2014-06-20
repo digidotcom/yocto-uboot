@@ -933,7 +933,9 @@ void board_cleanup_before_linux(void)
 	pin_unset_group(&mmc0_pins);
 	pin_unset_group(&mmc1_pins);
 #endif
+#ifdef CONFIG_USER_KEY
 	pin_unset_group(&userkey_pins);
+#endif
 	serial_ports_deinit();
 }
 #endif
