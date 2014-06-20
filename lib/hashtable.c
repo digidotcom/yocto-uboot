@@ -474,6 +474,20 @@ static void _hdelete(const char *key, struct hsearch_data *htab, ENTRY *ep,
 	--htab->filled;
 }
 
+static void delete_unprotected_vars(struct hsearch_data *htab)
+{
+	int i;
+	ENTRY *entry;
+
+	for (i = 1; i <= htab->size; ++i) {
+		if (htab->table[i].used > 0) {
+			entry = &htab->table[i].entry;
+			if ((entry->flags & ENV_FLAGS_VARACCESS_BIN_MASK) == 0)
+				_hdelete(entry->key, htab, entry, i);
+		}
+	}
+}
+
 int hdelete_r(const char *key, struct hsearch_data *htab, int flag)
 {
 	ENTRY e, *ep;
@@ -784,11 +798,18 @@ int himport_r(struct hsearch_data *htab,
 		memcpy(localvars, vars, sizeof(vars[0]) * nvars);
 
 	if ((flag & H_NOCLEAR) == 0) {
-		/* Destroy old hash table if one exists */
-		debug("Destroy Hash Table: %p table = %p\n", htab,
-		       htab->table);
-		if (htab->table)
-			hdestroy_r(htab);
+		if ((flag & H_FORCE) == 0) {
+			/* Not forced. Reuse the hash table but first delete
+			 * all variables without write-protect flags.
+			 */
+			delete_unprotected_vars(htab);
+		} else {
+			/* Destroy old hash table if one exists */
+			debug("Destroy Hash Table: %p table = %p\n", htab,
+			       htab->table);
+			if (htab->table)
+				hdestroy_r(htab);
+		}
 	}
 
 	/*

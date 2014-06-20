@@ -135,7 +135,9 @@ void set_default_env(const char *s)
 				"using default environment\n\n",
 				s + 1);
 		} else {
-			flags = H_INTERACTIVE;
+			if (*s == '*')
+				flags |= H_FORCE;	/* Forced reset */
+			flags |= H_INTERACTIVE;
 			puts(s);
 		}
 	} else {
@@ -152,7 +154,7 @@ void set_default_env(const char *s)
 
 
 /* [re]set individual variables to their value in the default environment */
-int set_default_vars(int nvars, char * const vars[])
+int set_default_vars(int nvars, char * const vars[], int flag)
 {
 	/*
 	 * Special use-case: import from default environment
@@ -160,7 +162,7 @@ int set_default_vars(int nvars, char * const vars[])
 	 */
 	return himport_r(&env_htab, (const char *)default_environment,
 				sizeof(default_environment), '\0',
-				H_NOCLEAR | H_INTERACTIVE, nvars, vars);
+				flag | H_NOCLEAR | H_INTERACTIVE, nvars, vars);
 }
 
 #ifndef CONFIG_SPL_BUILD

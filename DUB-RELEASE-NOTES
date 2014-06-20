@@ -2,6 +2,19 @@
 Digi U-Boot RELEASE NOTES
 -------------------------
 
+v2013.04 - DUB-2.2.1.2, released on 2014/06/20
+	- Added support for ConnectCore 6 SBC platform (ccimx6sbc).
+	- Fixed TFTP on-the-fly update mechanism.
+	- Added 'updatefile' command to update files into FAT partitions.
+	- Added verification step to 'update' command. 
+	- Changed default firmware file names to match Yocto's default
+	  build artifact filenames.
+	- Fixup FDT with HWID information
+	- Pass MAC addresses in cmdline to Android
+	- Protect MAC addresses from being reset by 'env default' command
+	  unless -f (forced) option passed.
+
+
 v2013.04 - DUB-2.1.1.2, released on 2014/04/09
 	- Disabled on-the-fly update from MMC which was wrong.
 	- Disable L2 cache which was causing occasional hangs.

@@ -538,7 +538,7 @@ int env_flags_validate(const ENTRY *item, const char *newval, enum env_op op,
 
 			if (defval == NULL)
 				defval = "";
-			printf("oldval: %s  defval: %s\n", oldval, defval);
+			debug("oldval: %s  defval: %s\n", oldval, defval);
 			if (strcmp(oldval, defval) != 0) {
 				printf("## Error: Can't overwrite \"%s\"\n",
 					name);

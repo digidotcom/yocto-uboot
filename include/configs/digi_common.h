@@ -76,6 +76,7 @@
 #define CONFIG_AUTO_BOOTSCRIPT
 #define CONFIG_BOOTSCRIPT		CONFIG_SYS_BOARD "-boot.scr"
 
+#define CONFIG_OVERWRITE_ETHADDR_ONCE
 #define CONFIG_DEFAULT_NETWORK_SETTINGS	\
 	"ethaddr=00:04:f3:ff:ff:fa\0" \
 	"wlanaddr=00:04:f3:ff:ff:fb\0" \
@@ -130,23 +131,67 @@
 /* device tree */
 #define CONFIG_FDT_MAXSIZE    (128 * 1024)
 
-#define DIGICMD_SRC_NET_ARGS	\
-	"      source=" CONFIG_SUPPORTED_SOURCES_NET " -> [filename]\n" \
+/* Digi commands arguments help */
+#define DIGICMD_ARG_BLKDEV_HELP	\
+	"       - device:part: number of device and partition\n"
+#define DIGICMD_ARG_FILESYS_HELP	\
+	"       - filesystem: fat (default)|ext4\n"
+#define DIGICMD_ARG_FILENAME_HELP	\
 	"       - filename: file to transfer (if not provided, filename will\n" \
-	"                   will be taken from variable '<partition>_file')\n" \
-	"\n"
-#define DIGICMD_SRC_BLOCK_ARGS	\
-	"      source=" CONFIG_SUPPORTED_SOURCES_BLOCK " -> [device:part] [filesystem] [filename]\n" \
-	"       - device:part: number of device and partition\n" \
-	"       - filesystem: fat|ext2\n" \
-	"       - filename: file to transfer (if not provided, filename will\n" \
-	"                   will be taken from variable '<partition>_file')\n" \
-	"\n"
-#define DIGICMD_SRC_RAM_ARGS	\
+	"                   will be taken from variable '<partition>_file')\n"
+#define DIGICMD_ARG_IMGADDR_HELP	\
+	"       - image_address: address of image in RAM\n"
+#define DIGICMD_ARG_IMGSIZE_HELP	\
+	"       - image_size: size of image in RAM\n"
+#define DIGICMD_ARG_SOURCEFILE_HELP	\
+	"       - source_file: file to transfer\n"
+#define DIGICMD_ARG_TARGETFILE_HELP	\
+	"       - target_file: target filename\n"
+#define DIGICMD_ARG_TARGETFILESYS_HELP	\
+	"       - target_fs: fat (default)\n"
+
+/* Help arguments for update command */
+#define DIGICMD_UPDATE_NET_ARGS_HELP	\
+	"      source=" CONFIG_SUPPORTED_SOURCES_NET " -> " \
+	"[filename]\n" \
+		DIGICMD_ARG_FILENAME_HELP
+#define DIGICMD_UPDATE_BLOCK_ARGS_HELP	\
+	"      source=" CONFIG_SUPPORTED_SOURCES_BLOCK " -> " \
+	"[device:part] [filesystem] [filename]\n" \
+		DIGICMD_ARG_BLKDEV_HELP \
+		DIGICMD_ARG_FILESYS_HELP \
+		DIGICMD_ARG_FILENAME_HELP
+#define DIGICMD_UPDATE_RAM_ARGS_HELP	\
 	"      source=ram -> <image_address> <image_size>\n" \
-	"       - image_address: address of image in RAM\n" \
-	"       - image_size: size of image in RAM\n" \
-	"\n"
+		DIGICMD_ARG_IMGADDR_HELP \
+		DIGICMD_ARG_IMGSIZE_HELP
+
+/* Help arguments for dboot command */
+#define DIGICMD_DBOOT_NET_ARGS_HELP	DIGICMD_UPDATE_NET_ARGS_HELP
+#define DIGICMD_DBOOT_BLOCK_ARGS_HELP	DIGICMD_UPDATE_BLOCK_ARGS_HELP
+
+/* Help arguments for updatefile command */
+#define DIGICMD_UPDATEFILE_NET_ARGS_HELP	\
+	"      source=" CONFIG_SUPPORTED_SOURCES_NET " -> " \
+	"[source_file] [targetfile] [target_fs]\n" \
+		DIGICMD_ARG_SOURCEFILE_HELP \
+		DIGICMD_ARG_TARGETFILE_HELP \
+		DIGICMD_ARG_TARGETFILESYS_HELP
+#define DIGICMD_UPDATEFILE_BLOCK_ARGS_HELP	\
+	"      source=" CONFIG_SUPPORTED_SOURCES_BLOCK " -> " \
+	"[device:part] [filesystem] [source_file] [target_file] [target_fs]\n" \
+		DIGICMD_ARG_BLKDEV_HELP \
+		DIGICMD_ARG_FILESYS_HELP \
+		DIGICMD_ARG_SOURCEFILE_HELP \
+		DIGICMD_ARG_TARGETFILE_HELP \
+		DIGICMD_ARG_TARGETFILESYS_HELP
+#define DIGICMD_UPDATEFILE_RAM_ARGS_HELP	\
+	"      source=ram -> "\
+	"<image_address> <image_size> [targetfile] [target_fs]\n" \
+		DIGICMD_ARG_IMGADDR_HELP \
+		DIGICMD_ARG_IMGSIZE_HELP \
+		DIGICMD_ARG_TARGETFILE_HELP \
+		DIGICMD_ARG_TARGETFILESYS_HELP
 
 #ifndef __ASSEMBLY__		/* put C only stuff in this section */
 /* macros */

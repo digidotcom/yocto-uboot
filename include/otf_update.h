@@ -12,6 +12,7 @@
 
 /* OTF flags */
 #define OTF_FLAG_FLUSH 		(1 << 0)
+#define OTF_FLAG_INIT 		(1 << 1)
 
 typedef struct otf_data {
 	unsigned int loadaddr;

@@ -131,7 +131,8 @@ static int do_mmcinfo(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 	mmc = find_mmc_device(curr_device);
 
 	if (mmc) {
-		mmc_init(mmc);
+		if (mmc_init(mmc))
+			return 1;
 
 		print_mmcinfo(mmc);
 		return 0;
@@ -193,7 +194,8 @@ static int do_mmcops(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 			printf("no mmc device at slot %x\n", curr_device);
 			return 1;
 		}
-		mmc_init(mmc);
+		if (mmc_init(mmc))
+			return 1;
 		mmc_dev = mmc_get_dev(curr_device);
 		if (mmc_dev != NULL &&
 				mmc_dev->type != DEV_TYPE_UNKNOWN) {
@@ -233,7 +235,8 @@ static int do_mmcops(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 			return 1;
 		}
 
-		mmc_init(mmc);
+		if (mmc_init(mmc))
+			return 1;
 		if (part != -1) {
 			int ret;
 			if (mmc->part_config == MMCPART_NOAVAILABLE) {
@@ -348,7 +351,8 @@ static int do_mmcops(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 		printf("\nMMC %s: dev # %d, block # %d, count %d ... ",
 				argv[1], curr_device, blk, cnt);
 
-		mmc_init(mmc);
+		if (mmc_init(mmc))
+			return 1;
 
 		if ((state == MMC_WRITE || state == MMC_ERASE)) {
 			if (mmc_getwp(mmc) == 1) {

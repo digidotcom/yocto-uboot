@@ -71,7 +71,7 @@ __weak void board_print_hwid(u32 *hwid)
 
 static int do_hwid(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
 {
-	const char *op = argc >= 2 ? argv[1] : NULL;
+	const char *op;
 	int confirmed = argc >= 3 && !strcmp(argv[2], "-y");
 	u32 bank = CONFIG_HWID_BANK;
 	u32 word = CONFIG_HWID_START_WORD;
@@ -79,6 +79,10 @@ static int do_hwid(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
 	u32 val[8];
 	int ret, i;
 
+	if (argc < 2)
+		return CMD_RET_USAGE;
+
+	op = argv[1];
 	argc -= 2 + confirmed;
 	argv += 2 + confirmed;
 

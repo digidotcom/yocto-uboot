@@ -37,16 +37,9 @@ static int phy_addr;
 	PAD_CTL_PUS_100K_UP | PAD_CTL_SPEED_MED |               \
 	PAD_CTL_DSE_40ohm   | PAD_CTL_SRE_FAST  | PAD_CTL_HYS)
 
-iomux_v3_cfg_t const uart1_pads[] = {
-	MX6_PAD_SD3_DAT7__UART1_TXD | MUX_PAD_CTRL(UART_PAD_CTRL),
-	MX6_PAD_SD3_DAT6__UART1_RXD | MUX_PAD_CTRL(UART_PAD_CTRL),
-};
-
-iomux_v3_cfg_t const lan8710_pads[] = {
-	/* SMSC LAN8710 PHY reset */
-	MX6_PAD_RGMII_RX_CTL__GPIO_6_24		| MUX_PAD_CTRL(NO_PAD_CTRL),
-	/* SMSC LAN8710 PHY interrupt */
-	MX6_PAD_ENET_REF_CLK__GPIO_1_23		| MUX_PAD_CTRL(NO_PAD_CTRL),
+iomux_v3_cfg_t const uart4_pads[] = {
+	MX6_PAD_KEY_COL0__UART4_TXD | MUX_PAD_CTRL(UART_PAD_CTRL),
+	MX6_PAD_KEY_ROW0__UART4_RXD | MUX_PAD_CTRL(UART_PAD_CTRL),
 };
 
 iomux_v3_cfg_t const ksz9031_pads[] = {
@@ -104,11 +97,12 @@ int setup_pmic_voltages(void)
 		if (pmic_write_bitfield(DA9063_GPIO_MODE8_15_ADDR, 0x1, 3, 0x1))
 			printf("Could not set GPIO11 high\n");
 
-		/* PWR_EN on the ccimx6adpt enables the +5V suppy and comes
-		 * from GP_FB_2. Configure this as high level active by setting
-		 * pin 6.
+		/* PWR_EN on the ccimx6sbc enables the +5V suppy and comes
+		 * from PMIC_GPIO7. Set this GPIO high to enable +5V supply.
 		 */
-		if (pmic_write_bitfield(DA9063_CONFIG_D_ADDR, 0x1, 6, 0x0))
+		if (pmic_write_bitfield(DA9063_GPIO6_7_ADDR, 0xf, 4, 0x3))
+			printf("Could not configure GPIO7\n");
+		if (pmic_write_bitfield(DA9063_GPIO_MODE0_7_ADDR, 0x1, 7, 0x1))
 			printf("Could not enable PWR_EN\n");
 	}
 	return 0;
@@ -117,27 +111,13 @@ int setup_pmic_voltages(void)
 
 static void setup_board_enet(void)
 {
-	int enet;
 	int phy_reset_gpio;
 
-	/* iomux for Gigabit or 10/100 and PHY selection
-	 * basing on env variable 'ENET'. Default to Gigabit.
-	 */
-	enet = (int)getenv_ulong("ENET", 10, 1000);
-	if (enet == 100) {
-		/* 10/100 ENET (SMSC PHY) */
-		phy_reset_gpio = IMX_GPIO_NR(6, 24);
-		phy_addr = CONFIG_ENET_PHYADDR_SMSC;
-		imx_iomux_v3_setup_multiple_pads(lan8710_pads,
-						 ARRAY_SIZE(lan8710_pads));
-	} else {
-		/* Gigabit ENET (Micrel PHY) */
-		phy_reset_gpio = IMX_GPIO_NR(1, 25);
-		phy_addr = CONFIG_ENET_PHYADDR_MICREL;
-		imx_iomux_v3_setup_multiple_pads(ksz9031_pads,
-						 ARRAY_SIZE(ksz9031_pads));
-	}
-
+	/* Gigabit ENET (Micrel PHY) */
+	phy_reset_gpio = IMX_GPIO_NR(1, 25);
+	phy_addr = CONFIG_ENET_PHYADDR_MICREL;
+	imx_iomux_v3_setup_multiple_pads(ksz9031_pads,
+					 ARRAY_SIZE(ksz9031_pads));
 	/* Assert PHY reset */
 	gpio_direction_output(phy_reset_gpio , 0);
 	/* Need 10ms to guarantee stable voltages */
@@ -155,7 +135,7 @@ int board_get_enet_phy_addr(void)
 
 static void setup_iomux_uart(void)
 {
-	imx_iomux_v3_setup_multiple_pads(uart1_pads, ARRAY_SIZE(uart1_pads));
+	imx_iomux_v3_setup_multiple_pads(uart4_pads, ARRAY_SIZE(uart4_pads));
 }
 
 int board_eth_init(bd_t *bis)

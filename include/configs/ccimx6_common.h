@@ -62,6 +62,18 @@
 #define CONFIG_PARTITION_UUIDS
 #define CONFIG_CMD_PART
 
+/* SATA Configs */
+
+#define CONFIG_CMD_SATA
+#ifdef CONFIG_CMD_SATA
+#define CONFIG_DWC_AHSATA
+#define CONFIG_SYS_SATA_MAX_DEVICE      1
+#define CONFIG_DWC_AHSATA_PORT_ID       0
+#define CONFIG_DWC_AHSATA_BASE_ADDR     SATA_ARB_BASE_ADDR
+#define CONFIG_LBA48
+#define CONFIG_LIBATA
+#endif
+
 #define CONFIG_CMD_PING
 #define CONFIG_CMD_DHCP
 #define CONFIG_CMD_MII
@@ -76,8 +88,8 @@
 
 /* protected environment variables (besides ethaddr and serial#) */
 #define CONFIG_ENV_FLAGS_LIST_STATIC	\
-	"wlanaddr:mo,"			\
-	"btaddr:mo,"			\
+	"wlanaddr:mc,"			\
+	"btaddr:mc,"			\
 	"bootargs_once:sr"
 
 #define CONFIG_CONS_INDEX              1
@@ -110,15 +122,33 @@
 					 (1 << SRC_MMC))
 #define CONFIG_SUPPORTED_SOURCES_NET	"tftp|nfs"
 #define CONFIG_SUPPORTED_SOURCES_BLOCK	"mmc"
-#define CONFIG_SUPPORTED_SOURCES_LIST	CONFIG_SUPPORTED_SOURCES_NET "|" \
-					CONFIG_SUPPORTED_SOURCES_BLOCK
-#define CONFIG_SUPPORTED_SOURCES_ARGS	DIGICMD_SRC_NET_ARGS \
-					DIGICMD_SRC_BLOCK_ARGS
+#define CONFIG_DBOOT_SUPPORTED_SOURCES_LIST	\
+	CONFIG_SUPPORTED_SOURCES_NET "|" \
+	CONFIG_SUPPORTED_SOURCES_BLOCK
+#define CONFIG_UPDATE_SUPPORTED_SOURCES_LIST	\
+	CONFIG_SUPPORTED_SOURCES_NET "|" \
+	CONFIG_SUPPORTED_SOURCES_BLOCK
+#define CONFIG_DBOOT_SUPPORTED_SOURCES_ARGS_HELP	\
+	DIGICMD_DBOOT_NET_ARGS_HELP "\n" \
+	DIGICMD_DBOOT_BLOCK_ARGS_HELP
+#define CONFIG_UPDATE_SUPPORTED_SOURCES_ARGS_HELP	\
+	DIGICMD_UPDATE_NET_ARGS_HELP "\n" \
+	DIGICMD_UPDATE_BLOCK_ARGS_HELP
+#define CONFIG_UPDATEFILE_SUPPORTED_SOURCES_ARGS_HELP	\
+	DIGICMD_UPDATEFILE_NET_ARGS_HELP "\n" \
+	DIGICMD_UPDATEFILE_BLOCK_ARGS_HELP
 
 #define CONFIG_BOOTDELAY               1
 
 #define CONFIG_LOADADDR			0x12000000
 #define CONFIG_SYS_TEXT_BASE		0x17800000
+/* RAM memory reserved for U-Boot, stack, malloc pool... */
+#define CONFIG_UBOOT_RESERVED		(10 * 1024 * 1024)
+
+/* RAM Address to do firmware update verification (half way from $loadaddr
+ * to the top of the RAM)
+ */
+#define CONFIG_VERIFYADDR		0x31000000
 
 /* Pool of randomly generated UUIDs at host machine */
 #define RANDOM_UUIDS	\
@@ -173,9 +203,10 @@
 #define CONFIG_EXTRA_ENV_SETTINGS \
 	CONFIG_DEFAULT_NETWORK_SETTINGS \
 	RANDOM_UUIDS \
+	"verifyaddr=" __stringify(CONFIG_VERIFYADDR) "\0" \
 	"script=boot.scr\0" \
 	"loadscript=fatload mmc ${mmcdev}:${mmcpart} ${loadaddr} ${script}\0" \
-	"uimage=uImage-" CONFIG_SYS_BOARD "\0" \
+	"uimage=uImage-" CONFIG_SYS_BOARD ".bin\0" \
 	"fdt_file=" CONFIG_DEFAULT_FDT_FILE "\0" \
 	"fdt_addr=0x18000000\0" \
 	"initrd_addr=0x19000000\0" \
@@ -249,31 +280,35 @@
 	"android_file=boot.img\0" \
 	"system_file=system.img\0" \
 	"partition_mmc_android=mmc rescan;" \
-		"if mmc dev ${mmcdev} 0;then;else mmc dev ${mmcdev};fi;" \
-		"gpt write mmc ${mmcdev} ${parts_android};" \
-		"mmc rescan\0" \
-	"bootargs_android=\"androidboot.console=ttymxc0 " \
-		"androidboot.hardware=freescale fbmem=28M vmalloc=400M\"\0" \
+		"if mmc dev ${mmcdev} 0; then " \
+			"gpt write mmc ${mmcdev} ${parts_android};" \
+			"mmc rescan;" \
+		"else " \
+			"if mmc dev ${mmcdev};then " \
+				"gpt write mmc ${mmcdev} ${parts_android};" \
+				"mmc rescan;" \
+			"else;" \
+			"fi;" \
+		"fi;\0" \
+	"bootargs_android=\"androidboot.hardware=freescale " \
+		"fbmem=28M vmalloc=400M\"\0" \
 	"bootargs_mmc_android=setenv bootargs console=${console},${baudrate} " \
 		"${bootargs_android} androidboot.mmcdev=${mmcdev} " \
-		"video=mxcfb0:${video0} " \
-		"video=mxcfb1:${video1} " \
-		"video=mxcfb2:${video2} " \
+		"androidboot.console=${console} " \
+		"${video_args} " \
+		"ethaddr=${ethaddr} wlanaddr=${wlanaddr} btaddr=${btaddr} " \
 		"${bootargs_once} ${std_bootargs}\0" \
 	"bootargs_tftp_android=setenv bootargs console=${console},${baudrate} " \
 		"${bootargs_android} root=/dev/nfs " \
-		"video=mxcfb0:${video0} " \
-		"video=mxcfb1:${video1} " \
-		"video=mxcfb2:${video2} " \
+		"androidboot.console=${console} " \
+		"${video_args} " \
 		"ip=dhcp nfsroot=${serverip}:${rootpath},v3,tcp " \
+		"ethaddr=${ethaddr} wlanaddr=${wlanaddr} btaddr=${btaddr} " \
 		"${bootargs_once} ${std_bootargs}\0" \
 	"bootargs_nfs_android=run bootargs_tftp_android\0" \
 	"mmcroot=PARTUUID=1c606ef5-f1ac-43b9-9bb5-d5c578580b6b\0" \
 	"bootargs_mmc_linux=setenv bootargs console=${console},${baudrate} " \
 		"${bootargs_linux} root=${mmcroot} rootwait rw " \
-		"video=mxcfb0:${video0} " \
-		"video=mxcfb1:${video1} " \
-		"video=mxcfb2:${video2} " \
 		"${bootargs_once} ${std_bootargs}\0" \
 	"bootargs_tftp_linux=setenv bootargs console=${console},${baudrate} " \
 		"${bootargs_linux} root=/dev/nfs " \
@@ -288,15 +323,20 @@
 		"name=rootfs2,size=1GiB,uuid=${part4_uuid};" \
 		"name=userfs,size=-,uuid=${part5_uuid};" \
 		"\"\0" \
-	"linux_file=dey-image-graphical-ccimx6adpt.boot.vfat\0" \
-	"rootfs_file=dey-image-graphical-ccimx6adpt.rootfs.ext4\0" \
+	"linux_file=dey-image-graphical-" CONFIG_SYS_BOARD ".boot.vfat\0" \
+	"rootfs_file=dey-image-graphical-" CONFIG_SYS_BOARD ".ext4\0" \
 	"partition_mmc_linux=mmc rescan;" \
-		"if mmc dev ${mmcdev} 0;then;else mmc dev ${mmcdev};fi;" \
-		"gpt write mmc ${mmcdev} ${parts_linux};" \
-		"mmc rescan\0" \
-	"video0=dev=ldb,LDB-HSD101PFW2,bpp=32\0" \
-	"video1=dev=hdmi,1920x1080M@60,bpp=32\0" \
-	"video2=off\0" \
+		"if mmc dev ${mmcdev} 0; then " \
+			"gpt write mmc ${mmcdev} ${parts_linux};" \
+			"mmc rescan;" \
+		"else " \
+			"if mmc dev ${mmcdev};then " \
+				"gpt write mmc ${mmcdev} ${parts_linux};" \
+				"mmc rescan;" \
+			"else;" \
+			"fi;" \
+		"fi;\0" \
+	"video_args=video=mxcfb0:dev=hdmi,1920x1080M@60\0" \
 	""	/* end line */
 
 #define CONFIG_BOOTCOMMAND \

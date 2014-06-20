@@ -221,10 +221,8 @@ store_block(int block, uchar *src, unsigned len)
 #endif /* CONFIG_SYS_DIRECT_FLASH_TFTP */
 	{
 		if (otf_update_hook != NULL) {
-			otfd.loadaddr = load_addr;
 			otfd.buf = src;
 			otfd.len = len;
-			otfd.flags = 0;
 			if (otf_update_hook(&otfd))
 				printf("Error writing on-the-fly\n");
 		}
@@ -1218,11 +1216,14 @@ void register_tftp_otf_update_hook(int (*hook)(otf_data_t *data),
 				   disk_partition_t *partition)
 {
 	otf_update_hook = hook;
+	/* Initialize data for new transfer */
 	otfd.part = partition;
+	otfd.loadaddr = load_addr;
+	otfd.flags = OTF_FLAG_INIT;
+	otfd.offset = 0;
 }
 
 void unregister_tftp_otf_update_hook(void)
 {
 	otf_update_hook = NULL;
-	otfd.part = NULL;
 }

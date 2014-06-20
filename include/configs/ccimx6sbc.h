@@ -15,16 +15,16 @@
  * GNU General Public License for more details.
  */
 
-#ifndef __CCIMX6ADPTJS_CONFIG_H
-#define __CCIMX6ADPT_CONFIG_H
+#ifndef __CCIMX6SBC_CONFIG_H
+#define __CCIMX6SBC_CONFIG_H
 
 #include "ccimx6_common.h"
 #include <asm/imx-common/gpio.h>
 
-#define CONFIG_MACH_TYPE	4842
-#define CONFIG_BOARD_DESCRIPTION	"ConnectCore 6 on the Adapter board"
-#define CONFIG_MXC_UART_BASE	UART1_BASE
-#define CONFIG_CONSOLE_DEV		"ttymxc0"
+#define CONFIG_MACH_TYPE		4899
+#define CONFIG_BOARD_DESCRIPTION	"ConnectCore 6 SBC"
+#define CONFIG_MXC_UART_BASE		UART4_BASE
+#define CONFIG_CONSOLE_DEV		"ttymxc3"
 #define CONFIG_DEFAULT_FDT_FILE		"uImage-imx6-" CONFIG_SYS_BOARD "-ldo.dtb"
 
 #define CONFIG_SYS_FSL_USDHC_NUM	2
@@ -43,7 +43,5 @@
 /* Ethernet PHY */
 #define CONFIG_PHY_MICREL
 #define CONFIG_ENET_PHYADDR_MICREL	3
-#define CONFIG_PHY_SMSC
-#define CONFIG_ENET_PHYADDR_SMSC	0
 
-#endif                         /* __CCIMX6ADPT_CONFIG_H */
+#endif                         /* __CCIMX6SBC_CONFIG_H */

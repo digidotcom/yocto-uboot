@@ -88,22 +88,15 @@ static int do_dboot(cmd_tbl_t* cmdtp, int flag, int argc, char * const argv[])
 
 	/* Get source of firmware file */
 	if (argc > 2) {
-		src = get_source(argv[2]);
+		src = get_source(argc, argv, &devpartno, &fs);
 		if (src == SRC_UNSUPPORTED) {
 			printf("'%s' is not supported as source\n",
 				argv[2]);
 			return CMD_RET_USAGE;
 		}
 		else if (src == SRC_UNDEFINED) {
+			printf("Error: undefined source\n");
 			return CMD_RET_USAGE;
-		}
-
-		if (src == SRC_USB || src == SRC_MMC || src == SRC_SATA) {
-			/* Get device:partition and file system */
-			if (argc > 3)
-				devpartno = argv[3];
-			if (argc > 4)
-				fs = argv[4];
 		}
 	}
 
@@ -164,14 +157,14 @@ static int do_dboot(cmd_tbl_t* cmdtp, int flag, int argc, char * const argv[])
 
 U_BOOT_CMD(
 	dboot,	6,	0,	do_dboot,
-	"Digi modules boot commands",
+	"Digi modules boot command",
 	"<os> [source] [extra-args...]\n"
 	" Description: Boots <os> via <source>\n"
 	" Arguments:\n"
 	"   - os:           a partition name or one of the reserved names: \n"
 	"                   linux|android\n"
-	"   - [source]:     " CONFIG_SUPPORTED_SOURCES_LIST "\n"
+	"   - [source]:     " CONFIG_DBOOT_SUPPORTED_SOURCES_LIST "\n"
 	"   - [extra-args]: extra arguments depending on 'source'\n"
 	"\n"
-	CONFIG_SUPPORTED_SOURCES_ARGS
+	CONFIG_DBOOT_SUPPORTED_SOURCES_ARGS_HELP
 );

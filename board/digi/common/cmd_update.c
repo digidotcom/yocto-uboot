@@ -58,12 +58,20 @@ void unregister_otf_hook(int src)
 
 }
 
+enum {
+	ERR_WRITE = 1,
+	ERR_READ,
+	ERR_VERIFY,
+};
+
 static int write_firmware(char *partname, disk_partition_t *info)
 {
 	char cmd[CONFIG_SYS_CBSIZE] = "";
-	char *filesize = getenv("filesize");
-	unsigned long size;
+	char *filesize_str = getenv("filesize");
+	unsigned long filesize;
+	unsigned long size_blks, loadaddr, verifyaddr, u, m;
 	block_dev_desc_t *mmc_dev;
+	int mod = 0;
 
 	mmc_dev = mmc_get_dev(CONFIG_SYS_STORAGE_DEV);
 	if (NULL == mmc_dev) {
@@ -71,17 +79,20 @@ static int write_firmware(char *partname, disk_partition_t *info)
 		return -1;
 	}
 
-	if (NULL == filesize) {
+	if (NULL == filesize_str) {
 		debug("Cannot determine filesize\n");
 		return -1;
 	}
-	size = simple_strtoul(filesize, NULL, 16) / mmc_dev->blksz;
-	if (simple_strtoul(filesize, NULL, 16) % mmc_dev->blksz)
-		size++;
 
-	if (size > info->size) {
+	filesize = simple_strtoul(filesize_str, NULL, 16);
+	size_blks = filesize / mmc_dev->blksz;
+	mod = filesize % mmc_dev->blksz;
+	if (mod)
+		size_blks++;
+
+	if (size_blks > info->size) {
 		printf("File size (%lu bytes) exceeds partition size (%lu bytes)!\n",
-			size * mmc_dev->blksz,
+			filesize,
 			info->size * mmc_dev->blksz);
 		return -1;
 	}
@@ -102,9 +113,97 @@ static int write_firmware(char *partname, disk_partition_t *info)
 		return -1;
 	}
 
-	/* Prepare write command */
+	/* Write firmware command */
+	printf("Writing firmware...\n");
 	sprintf(cmd, "%s write $loadaddr %lx %lx", CONFIG_SYS_STORAGE_MEDIA,
-		info->start, size);
+		info->start, size_blks);
+	if (run_command(cmd, 0))
+		return ERR_WRITE;
+
+	/* If there is enough RAM to hold two copies of the firmware,
+	 * verify written firmware.
+	 * +--------|---------------------|------------------|--------------+
+	 * |        L                     V                  | U-Boot+Stack |
+	 * +--------|---------------------|------------------|--------------+
+	 * P                                                 U              M
+	 *
+	 *  P = PHYS_SDRAM (base address of SDRAM)
+	 *  L = $loadaddr
+	 *  V = $verifyaddr
+	 *  M = last address of SDRAM (CONFIG_DDR_MB (size of SDRAM) + P)
+	 *  U = SDRAM address where U-Boot is located (plus margin)
+	 */
+	loadaddr = getenv_ulong("loadaddr", 16, CONFIG_LOADADDR);
+	verifyaddr = getenv_ulong("verifyaddr", 16, CONFIG_VERIFYADDR);
+	m = PHYS_SDRAM + (CONFIG_DDR_MB * 1024 * 1024);
+	u = m - CONFIG_UBOOT_RESERVED;
+
+	/* ($loadaddr + firmware size) must not exceed $verifyaddr
+	 * ($verifyaddr + firmware size) must not exceed U
+	 */
+	if ((loadaddr + size_blks * mmc_dev->blksz) < verifyaddr &&
+	    (verifyaddr + size_blks * mmc_dev->blksz) < u) {
+		char *p1, *p2;
+		int i;
+
+		/* Read back data... */
+		printf("Reading back firmware...\n");
+		sprintf(cmd, "%s read %lx %lx %lx", CONFIG_SYS_STORAGE_MEDIA,
+			verifyaddr, info->start, size_blks);
+		if (run_command(cmd, 0))
+			return ERR_READ;
+		/* ...then compare by 32-bit words (faster than by bytes)
+		 * padding with zeros any bytes at the end to make the size
+		 * be a multiple of 4 */
+		printf("Verifying firmware...\n");
+		p1 = (char *)(loadaddr + filesize);
+		p2 = (char *)(verifyaddr + filesize);
+		mod = filesize % 4;
+		/* Pad mod bytes with zeros in $loadaddr and $verifyaddr */
+		if (mod) {
+			for (i = 0; i < (4 - mod); i++) {
+				*(p1 + i) = 0;
+				*(p2 + i) = 0;
+			}
+			sprintf(cmd, "cmp.l $loadaddr %lx %lx", verifyaddr,
+				(filesize / 4) + 1);
+		} else {
+			sprintf(cmd, "cmp.l $loadaddr %lx %lx", verifyaddr,
+				filesize / 4);
+		}
+		if (run_command(cmd, 0))
+			return ERR_VERIFY;
+		printf("Update was successful\n");
+	} else {
+		printf("Firmware updated but not verified "
+		       "(not enough available RAM to verify)\n");
+	}
+
+	return 0;
+}
+
+static int write_file(char *targetfilename, char *targetfs, int part)
+{
+	char cmd[CONFIG_SYS_CBSIZE] = "";
+	char *filesize = getenv("filesize");
+
+	if (NULL == filesize) {
+		debug("Cannot determine filesize\n");
+		return -1;
+	}
+
+	/* Change to storage device */
+	sprintf(cmd, "%s dev %d", CONFIG_SYS_STORAGE_MEDIA,
+		CONFIG_SYS_STORAGE_DEV);
+	if (run_command(cmd, 0)) {
+		debug("Cannot change to storage device\n");
+		return -1;
+	}
+
+	/* Prepare write command */
+	sprintf(cmd, "%swrite %s %d:%d $loadaddr %s %s", targetfs,
+		CONFIG_SYS_STORAGE_MEDIA, CONFIG_SYS_STORAGE_DEV, part,
+		targetfilename, filesize);
 
 	return run_command(cmd, 0);
 }
@@ -150,7 +249,7 @@ static int do_update(cmd_tbl_t* cmdtp, int flag, int argc, char * const argv[])
 	/* Get data of partition to be updated */
 	ret = get_target_partition(argv[1], &info);
 	if (ret) {
-		printf("Partition '%s' not found\n", argv[1]);
+		printf("Error: partition '%s' not found\n", argv[1]);
 		return CMD_RET_FAILURE;
 	}
 
@@ -165,22 +264,15 @@ static int do_update(cmd_tbl_t* cmdtp, int flag, int argc, char * const argv[])
 
 	/* Get source of update firmware file */
 	if (argc > 2) {
-		src = get_source(argv[2]);
+		src = get_source(argc, argv, &devpartno, &fs);
 		if (src == SRC_UNSUPPORTED) {
-			printf("'%s' is not supported as source\n",
+			printf("Error: '%s' is not supported as source\n",
 				argv[2]);
 			return CMD_RET_USAGE;
 		}
 		else if (src == SRC_UNDEFINED) {
+			printf("Error: undefined source\n");
 			return CMD_RET_USAGE;
-		}
-
-		if (src == SRC_USB || src == SRC_MMC || src == SRC_SATA) {
-			/* Get device:partition and file system */
-			if (argc > 3)
-				devpartno = argv[3];
-			if (argc > 4)
-				fs = argv[4];
 		}
 	}
 
@@ -191,7 +283,7 @@ static int do_update(cmd_tbl_t* cmdtp, int flag, int argc, char * const argv[])
 		ret = get_default_filename(argv[1], filename, CMD_UPDATE);
 		if (ret) {
 			printf("Error: need a filename\n");
-			return CMD_RET_FAILURE;
+			return CMD_RET_USAGE;
 		}
 	}
 
@@ -209,11 +301,12 @@ static int do_update(cmd_tbl_t* cmdtp, int flag, int argc, char * const argv[])
 
 	if (otf) {
 		/* Prepare command to change to storage device */
-		sprintf(cmd, "mmc dev %d", CONFIG_SYS_STORAGE_DEV);
+		sprintf(cmd, CONFIG_SYS_STORAGE_MEDIA " dev %d",
+			CONFIG_SYS_STORAGE_DEV);
 		/* Change to storage device */
 		if (run_command(cmd, 0)) {
-			printf("Cannot change to storage device\n");
-			ret = -1;
+			printf("Error: cannot change to storage device\n");
+			ret = CMD_RET_FAILURE;
 			goto _ret;
 		}
 	}
@@ -225,14 +318,19 @@ static int do_update(cmd_tbl_t* cmdtp, int flag, int argc, char * const argv[])
 		ret = CMD_RET_FAILURE;
 		goto _ret;
 	} else if (ret == LDFW_LOADED && otf) {
-		ret = 0;
+		ret = CMD_RET_SUCCESS;
 		goto _ret;
 	}
 
 	/* Write firmware file from RAM to storage */
 	ret = write_firmware(argv[1], &info);
 	if (ret) {
-		printf("Error writing firmware\n");
+		if (ret == ERR_READ)
+			printf("Error while reading back written firmware!\n");
+		else if (ret == ERR_VERIFY)
+			printf("Error while verifying written firmware!\n");
+		else
+			printf("Error writing firmware!\n");
 		ret = CMD_RET_FAILURE;
 		goto _ret;
 	}
@@ -257,14 +355,153 @@ _ret:
 
 U_BOOT_CMD(
 	update,	6,	0,	do_update,
-	"Digi modules update commands",
+	"Digi modules update command",
 	"<partition>  [source] [extra-args...]\n"
-	" Description: updates flash <partition> via <source>\n"
+	" Description: updates (raw writes) eMMC <partition> via <source>\n"
 	" Arguments:\n"
-	"   - partition:    a partition name or one of the reserved names: \n"
+	"   - partition:    a GUID partition name or one of the reserved names: \n"
 	"                   uboot\n"
-	"   - [source]:     " CONFIG_SUPPORTED_SOURCES_LIST "\n"
+	"   - [source]:     " CONFIG_UPDATE_SUPPORTED_SOURCES_LIST "\n"
 	"   - [extra-args]: extra arguments depending on 'source'\n"
 	"\n"
-	CONFIG_SUPPORTED_SOURCES_ARGS
+	CONFIG_UPDATE_SUPPORTED_SOURCES_ARGS_HELP
+);
+
+/* Certain command line arguments of 'update' command may be at different
+ * index depending on the selected <source>. This function returns in 'arg'
+ * the argument at <index> plus an offset that depends on the selected <source>
+ * Upon calling, the <index> must be given as if <source> was SRC_RAM.
+ */
+static int get_arg_src(int argc, char * const argv[], int src, int index,
+		       char **arg)
+{
+	switch (src) {
+	case SRC_TFTP:
+	case SRC_NFS:
+		index += 1;
+		break;
+	case SRC_MMC:
+	case SRC_USB:
+	case SRC_SATA:
+		index += 3;
+		break;
+	case SRC_RAM:
+		break;
+	default:
+		return -1;
+	}
+
+	if (argc > index) {
+		*arg = (char *)argv[index];
+
+		return 0;
+	}
+
+	return -1;
+}
+
+static int do_updatefile(cmd_tbl_t* cmdtp, int flag, int argc,
+			 char * const argv[])
+{
+	int src = SRC_TFTP;	/* default to TFTP */
+	char *devpartno = NULL;
+	char *fs = NULL;
+	disk_partition_t info;
+	char *srcfilename = NULL;
+	char *targetfilename = NULL;
+	char *targetfs = NULL;
+	const char *default_fs = "fat";
+	int part;
+	int i;
+	char *supported_fs[] = {
+#ifdef CONFIG_FAT_WRITE
+		"fat",
+#endif
+#ifdef CONFIG_EXT4_WRITE
+		"ext4",
+#endif
+	};
+
+	if (argc < 2)
+		return CMD_RET_USAGE;
+
+	/* Get data of partition to be updated */
+	part = get_partition_byname(CONFIG_SYS_STORAGE_MEDIA,
+				    __stringify(CONFIG_SYS_STORAGE_DEV),
+				    argv[1], &info);
+	if (part < 0) {
+		printf("Error: partition '%s' not found\n", argv[1]);
+		return CMD_RET_FAILURE;
+	}
+
+	/* Get source of update firmware file */
+	if (argc > 2) {
+		src = get_source(argc, argv, &devpartno, &fs);
+		if (src == SRC_UNSUPPORTED) {
+			printf("Error: '%s' is not supported as source\n",
+				argv[2]);
+			return CMD_RET_USAGE;
+		}
+		else if (src == SRC_UNDEFINED) {
+			printf("Error: undefined source\n");
+			return CMD_RET_USAGE;
+		}
+	}
+
+	/* Get file name */
+	if (get_arg_src(argc, argv, src, 2, &srcfilename)) {
+		printf("Error: need a filename\n");
+		return CMD_RET_USAGE;
+	}
+
+	/* Get target file name. If not provided use srcfilename by default */
+	if (get_arg_src(argc, argv, src, 3, &targetfilename))
+		targetfilename = srcfilename;
+
+	/* Get target filesystem. If not provided use 'fat' by default */
+	if (get_arg_src(argc, argv, src, 4, &targetfs))
+		targetfs = (char *)default_fs;
+
+	/* Check target fs is supported */
+	for (i = 0; i < ARRAY_SIZE(supported_fs); i++)
+		if (!strcmp(targetfs, supported_fs[i]))
+			break;
+
+	if (i >= ARRAY_SIZE(supported_fs)) {
+		printf("Error: target file system '%s' is unsupported for "
+			"write operation.\n"
+			"Valid file systems are: ", targetfs);
+		for (i = 0; i < ARRAY_SIZE(supported_fs); i++)
+			printf("%s ", supported_fs[i]);
+		printf("\n");
+		return CMD_RET_FAILURE;
+	}
+
+	/* Load firmware file to RAM */
+	if (LDFW_ERROR == load_firmware(src, srcfilename, devpartno, fs,
+					"$loadaddr", NULL)) {
+		printf("Error loading firmware file to RAM\n");
+		return CMD_RET_FAILURE;
+	}
+
+	/* Write file from RAM to storage partition */
+	if (write_file(targetfilename, targetfs, part)) {
+		printf("Error writing file\n");
+		return CMD_RET_FAILURE;
+	}
+
+	return CMD_RET_SUCCESS;
+}
+
+U_BOOT_CMD(
+	updatefile,	8,	0,	do_updatefile,
+	"Digi modules updatefile command",
+	"<partition>  [source] [extra-args...]\n"
+	" Description: updates/writes a file in <partition> via <source>\n"
+	" Arguments:\n"
+	"   - partition:    a GUID partition name where to upload the file\n"
+	"   - [source]:     " CONFIG_UPDATE_SUPPORTED_SOURCES_LIST "\n"
+	"   - [extra-args]: extra arguments depending on 'source'\n"
+	"\n"
+	CONFIG_UPDATEFILE_SUPPORTED_SOURCES_ARGS_HELP
 );
