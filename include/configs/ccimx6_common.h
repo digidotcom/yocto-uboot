@@ -297,23 +297,23 @@
 		"androidboot.console=${console} " \
 		"${video_args} " \
 		"ethaddr=${ethaddr} wlanaddr=${wlanaddr} btaddr=${btaddr} " \
-		"${bootargs_once} ${std_bootargs}\0" \
+		"${bootargs_once} ${extra_bootargs}\0" \
 	"bootargs_tftp_android=setenv bootargs console=${console},${baudrate} " \
 		"${bootargs_android} root=/dev/nfs " \
 		"androidboot.console=${console} " \
 		"${video_args} " \
 		"ip=dhcp nfsroot=${serverip}:${rootpath},v3,tcp " \
 		"ethaddr=${ethaddr} wlanaddr=${wlanaddr} btaddr=${btaddr} " \
-		"${bootargs_once} ${std_bootargs}\0" \
+		"${bootargs_once} ${extra_bootargs}\0" \
 	"bootargs_nfs_android=run bootargs_tftp_android\0" \
 	"mmcroot=PARTUUID=1c606ef5-f1ac-43b9-9bb5-d5c578580b6b\0" \
 	"bootargs_mmc_linux=setenv bootargs console=${console},${baudrate} " \
 		"${bootargs_linux} root=${mmcroot} rootwait rw " \
-		"${bootargs_once} ${std_bootargs}\0" \
+		"${bootargs_once} ${extra_bootargs}\0" \
 	"bootargs_tftp_linux=setenv bootargs console=${console},${baudrate} " \
 		"${bootargs_linux} root=/dev/nfs " \
 		"ip=dhcp nfsroot=${serverip}:${rootpath},v3,tcp " \
-		"${bootargs_once} ${std_bootargs}\0" \
+		"${bootargs_once} ${extra_bootargs}\0" \
 	"bootargs_nfs_linux=run bootargs_tftp_linux\0" \
 	"parts_linux=\"uuid_disk=${uuid_disk};" \
 		"start=2MiB," \

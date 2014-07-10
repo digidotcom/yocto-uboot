@@ -2,8 +2,9 @@
 Digi U-Boot RELEASE NOTES
 -------------------------
 
-v2013.04 - DUB-2.2.1.2, released on 2014/06/20
+v2013.04 - DUB-2.2.2.1, released on 2014/07/10
 	- Added support for ConnectCore 6 SBC platform (ccimx6sbc).
+	- Added DDR3 calibration values.
 	- Fixed TFTP on-the-fly update mechanism.
 	- Added 'updatefile' command to update files into FAT partitions.
 	- Added verification step to 'update' command. 

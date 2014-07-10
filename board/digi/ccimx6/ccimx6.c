@@ -35,6 +35,7 @@
 #include <mmc.h>
 #include <fsl_esdhc.h>
 #include <fuse.h>
+#include <micrel.h>
 #include <miiphy.h>
 #include <otf_update.h>
 #include <part.h>
@@ -105,6 +106,52 @@ struct i2c_pads_info i2c_pad_info2 = {
 };
 #endif
 #endif
+
+static int mx6_rgmii_rework(struct phy_device *phydev)
+{
+	/*
+	 * Micrel PHY KSZ9031 has four MMD registers to configure the clock skew
+	 * of different signals. In U-Boot we're having Ethernet issues on
+	 * certain boards which work fine in Linux. We examined these MMD clock
+	 * skew registers in Linux which have different values than the reset
+	 * defaults:
+	 * 			Reset default		Linux
+	 * ------------------------------------------------------------------
+	 *  Control data pad	0077 (no skew)		0000 (-0.42 ns)
+	 *  RX data pad		7777 (no skew)		0000 (-0.42 ns)
+	 *  TX data pad		7777 (no skew)		7777 (no skew)
+	 *  Clock pad		3def (no skew)		03ff (+0.96 ns)
+	 *
+	 *  Setting the skews used in Linux solves the issues in U-Boot.
+	 */
+
+	/* control data pad skew - devaddr = 0x02, register = 0x04 */
+	ksz9031_phy_extended_write(phydev, 0x02,
+				   MII_KSZ9031_EXT_RGMII_CTRL_SIG_SKEW,
+				   MII_KSZ9031_MOD_DATA_NO_POST_INC, 0x0000);
+	/* rx data pad skew - devaddr = 0x02, register = 0x05 */
+	ksz9031_phy_extended_write(phydev, 0x02,
+				   MII_KSZ9031_EXT_RGMII_RX_DATA_SKEW,
+				   MII_KSZ9031_MOD_DATA_NO_POST_INC, 0x0000);
+	/* tx data pad skew - devaddr = 0x02, register = 0x05 */
+	ksz9031_phy_extended_write(phydev, 0x02,
+				   MII_KSZ9031_EXT_RGMII_TX_DATA_SKEW,
+				   MII_KSZ9031_MOD_DATA_NO_POST_INC, 0x7777);
+	/* gtx and rx clock pad skew - devaddr = 0x02, register = 0x08 */
+	ksz9031_phy_extended_write(phydev, 0x02,
+				   MII_KSZ9031_EXT_RGMII_CLOCK_SKEW,
+				   MII_KSZ9031_MOD_DATA_NO_POST_INC, 0x03ff);
+	return 0;
+}
+
+int board_phy_config(struct phy_device *phydev)
+{
+	mx6_rgmii_rework(phydev);
+	if (phydev->drv->config)
+		phydev->drv->config(phydev);
+
+	return 0;
+}
 
 int dram_init(void)
 {
