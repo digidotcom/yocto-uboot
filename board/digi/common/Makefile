@@ -48,7 +48,7 @@ COBJS-$(CONFIG_CMD_NVRAM) += cmd_nvram/mtd.o \
 	  cmd_nvram/nvram_priv_uboot.o \
 	  cmd_nvram/env.o \
 	  cmd_nvram/partition.o
-COBJS-$(CONFIG_PLATFORM_HAS_HWID) += cmd_hwid.o
+COBJS-$(CONFIG_HAS_HWID) += cmd_hwid.o
 COBJS-$(CONFIG_CMD_UPDATE) += cmd_update.o helper.o
 COBJS-$(CONFIG_CMD_DBOOT) += cmd_dboot.o helper.o
 

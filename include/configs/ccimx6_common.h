@@ -107,10 +107,14 @@
 #ifdef CONFIG_CMD_FUSE
 #define CONFIG_MXC_OCOTP
 #endif
-#define CONFIG_PLATFORM_HAS_HWID
+#define CONFIG_HAS_HWID
+#ifdef CONFIG_HAS_HWID
 #define CONFIG_HWID_BANK		4
 #define CONFIG_HWID_START_WORD		2
 #define CONFIG_HWID_WORDS_NUMBER	2
+#define CONFIG_HWID_LOCK_FUSE		(1 << 8)
+#define CONFIG_MANUF_STRINGS_HELP	"<LYYWWGGXXXXXX> <VVHC>"
+#endif /* CONFIG_HAS_HWID */
 
 #define CONFIG_CMD_UPDATE
 /* On the fly update chunk (must be a multiple of mmc block size) */
@@ -212,8 +216,8 @@
 	"initrd_addr=0x19000000\0" \
 	"initrd_file=uramdisk.img\0" \
 	"boot_fdt=try\0" \
-	"bootscript=" CONFIG_BOOTSCRIPT "\0" \
 	"ip_dyn=yes\0" \
+	"phy_mode=auto\0" \
 	"console=" CONFIG_CONSOLE_DEV "\0" \
 	"fdt_high=0xffffffff\0"	  \
 	"initrd_high=0xffffffff\0" \

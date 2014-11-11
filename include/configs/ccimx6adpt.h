@@ -25,7 +25,7 @@
 #define CONFIG_BOARD_DESCRIPTION	"ConnectCore 6 on the Adapter board"
 #define CONFIG_MXC_UART_BASE	UART1_BASE
 #define CONFIG_CONSOLE_DEV		"ttymxc0"
-#define CONFIG_DEFAULT_FDT_FILE		"uImage-imx6-" CONFIG_SYS_BOARD "-ldo.dtb"
+#define CONFIG_DEFAULT_FDT_FILE		"uImage-imx6q-" CONFIG_SYS_BOARD ".dtb"
 
 #define CONFIG_SYS_FSL_USDHC_NUM	2
 #define CONFIG_MMCDEV_USDHC4		0	/* mmc index for SHDC4 (eMMC) */
@@ -45,5 +45,8 @@
 #define CONFIG_ENET_PHYADDR_MICREL	3
 #define CONFIG_PHY_SMSC
 #define CONFIG_ENET_PHYADDR_SMSC	0
+
+/* Celsius degrees below CPU's max die temp at which boot should be attempted */
+#define CONFIG_BOOT_TEMP_BELOW_MAX		10
 
 #endif                         /* __CCIMX6ADPT_CONFIG_H */

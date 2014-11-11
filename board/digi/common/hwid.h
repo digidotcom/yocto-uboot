@@ -15,12 +15,13 @@
 #define __HWID_H_
 
 struct ccimx6_hwid {
-	unsigned char	tf;		/* location */
+	unsigned char	location;	/* location */
 	u8		variant;	/* module variant */
 	unsigned char	hv;		/* hardware version */
 	unsigned char	cert;		/* type of wifi certification */
 	u8		year;		/* manufacturing year */
-	unsigned char	month;		/* manufacturing month */
+	u8		week;		/* manufacturing week */
+	u8		genid;		/* generator id */
 	u32		sn;		/* serial number */
 };
 
@@ -103,6 +104,12 @@ struct ccimx6_variant ccimx6_variants[] = {
 		CCIMX6_HAS_WIRELESS,
 		"i.MX6 Dual, Automotive, Wireless",
 	},
+};
+
+const char *cert_regions[] = {
+	"U.S.A.",
+	"International",
+	"Japan",
 };
 
 #endif	/* __HWID_H_ */

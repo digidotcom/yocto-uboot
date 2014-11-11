@@ -71,7 +71,6 @@ static int write_firmware(char *partname, disk_partition_t *info)
 	unsigned long filesize;
 	unsigned long size_blks, loadaddr, verifyaddr, u, m;
 	block_dev_desc_t *mmc_dev;
-	int mod = 0;
 
 	mmc_dev = mmc_get_dev(CONFIG_SYS_STORAGE_DEV);
 	if (NULL == mmc_dev) {
@@ -85,10 +84,7 @@ static int write_firmware(char *partname, disk_partition_t *info)
 	}
 
 	filesize = simple_strtoul(filesize_str, NULL, 16);
-	size_blks = filesize / mmc_dev->blksz;
-	mod = filesize % mmc_dev->blksz;
-	if (mod)
-		size_blks++;
+	size_blks = (filesize / mmc_dev->blksz) + (filesize % mmc_dev->blksz != 0);
 
 	if (size_blks > info->size) {
 		printf("File size (%lu bytes) exceeds partition size (%lu bytes)!\n",
@@ -143,7 +139,7 @@ static int write_firmware(char *partname, disk_partition_t *info)
 	 */
 	if ((loadaddr + size_blks * mmc_dev->blksz) < verifyaddr &&
 	    (verifyaddr + size_blks * mmc_dev->blksz) < u) {
-		char *p1, *p2;
+		unsigned long filesize_padded;
 		int i;
 
 		/* Read back data... */
@@ -154,23 +150,19 @@ static int write_firmware(char *partname, disk_partition_t *info)
 			return ERR_READ;
 		/* ...then compare by 32-bit words (faster than by bytes)
 		 * padding with zeros any bytes at the end to make the size
-		 * be a multiple of 4 */
+		 * be a multiple of 4.
+		 *
+		 * Reference: http://stackoverflow.com/a/2022252
+		 */
 		printf("Verifying firmware...\n");
-		p1 = (char *)(loadaddr + filesize);
-		p2 = (char *)(verifyaddr + filesize);
-		mod = filesize % 4;
-		/* Pad mod bytes with zeros in $loadaddr and $verifyaddr */
-		if (mod) {
-			for (i = 0; i < (4 - mod); i++) {
-				*(p1 + i) = 0;
-				*(p2 + i) = 0;
-			}
-			sprintf(cmd, "cmp.l $loadaddr %lx %lx", verifyaddr,
-				(filesize / 4) + 1);
-		} else {
-			sprintf(cmd, "cmp.l $loadaddr %lx %lx", verifyaddr,
-				filesize / 4);
+		filesize_padded = (filesize + (4 - 1)) & ~(4 - 1);
+
+		for (i = filesize; i < filesize_padded; i++) {
+			*((char *)loadaddr + i) = 0;
+			*((char *)verifyaddr + i) = 0;
 		}
+		sprintf(cmd, "cmp.l %lx %lx %lx", loadaddr, verifyaddr,
+			(filesize_padded / 4));
 		if (run_command(cmd, 0))
 			return ERR_VERIFY;
 		printf("Update was successful\n");

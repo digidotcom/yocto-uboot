@@ -68,7 +68,7 @@ extern int  AT91F_DataflashInit(void);
 extern void dataflash_print_info(void);
 #endif
 
-#ifdef CONFIG_PLATFORM_HAS_HWID
+#ifdef CONFIG_HAS_HWID
 extern int get_hwid(void);
 #endif
 
@@ -624,7 +624,7 @@ void board_init_r(gd_t *id, ulong dest_addr)
 	else
 		set_default_env(NULL);
 
-#if defined(CONFIG_PLATFORM_HAS_HWID)
+#if defined(CONFIG_HAS_HWID)
 	get_hwid();
 #endif
 

@@ -2,9 +2,25 @@
 Digi U-Boot RELEASE NOTES
 -------------------------
 
-v2013.04 - DUB-2.2.2.1, released on 2014/07/10
+v2013.04 - DUB-2.3.0.3, released on 2014/09/09
+	- Add DDR3 calibration values for cavity-less module.
+	- Added CONFIG_BOOT_TEMP_BELOW_MAX to establish celsius degrees
+	  below CPU's max die temp at which boot should be attempted
+	  (defaults to 10C).
+	- Variable 'phy_mode' allows you to force the PHY to work as MASTER
+	  during master/slave negotiation, which may speed up the
+	  autonegotiation with Gigabit switches.
+	- Disable automatic TFTP bootscript download by clearing the
+	  'bootscript' variable to avoid long PHY autonegotiation time
+	  during boot.
+	- Abort OTF update operation on chunk write failure.
+	- Added support for carrier board version in OTP bits.
+	- Disable power on audio codec on SBC v2 carrier board.
+	- Update HWID format and add manufacturing commands.
+
+
+v2013.04 - DUB-2.2.1.2, released on 2014/06/20
 	- Added support for ConnectCore 6 SBC platform (ccimx6sbc).
-	- Added DDR3 calibration values.
 	- Fixed TFTP on-the-fly update mechanism.
 	- Added 'updatefile' command to update files into FAT partitions.
 	- Added verification step to 'update' command. 

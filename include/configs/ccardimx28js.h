@@ -55,7 +55,7 @@
                                         CONFIG_MODULE_STRING
 #define CONFIG_DIGI_CMD
 #define CONFIG_MXS_OTP
-#define CONFIG_PLATFORM_HAS_HWID
+#define CONFIG_HAS_HWID
 #define CONFIG_HWID_LENGTH		8
 #define CONFIG_BOARD_BEFORE_MLOOP_INIT
 #define CONFIG_CMD_NVRAM

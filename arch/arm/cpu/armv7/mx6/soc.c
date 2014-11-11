@@ -45,16 +45,12 @@ struct scu_regs {
 };
 
 #define TEMPERATURE_MIN		-40
-#define TEMPERATURE_HOT		80
-#define TEMPERATURE_MAX		125
 #define FACTOR1			15976
 #define FACTOR2			4297157
 #define MEASURE_FREQ		327
 
 #define REG_VALUE_TO_CEL(ratio, raw) \
 	((raw_n40c - raw) * 100 / ratio - 40)
-
-static unsigned int fuse = ~0;
 
 u32 get_cpu_rev(void)
 {
@@ -176,18 +172,36 @@ static void imx_set_wdog_powerdown(bool enable)
 	writew(enable, &wdog2->wmcr);
 }
 
-static int read_cpu_temperature(void)
+static u32 read_temp_fuse(void)
 {
-	int temperature;
-	unsigned int ccm_ccgr2;
-	unsigned int reg, tmp;
-	unsigned int raw_25c, raw_n40c, ratio;
-	struct anatop_regs *anatop = (struct anatop_regs *)ANATOP_BASE_ADDR;
-	struct mxc_ccm_reg *mxc_ccm = (struct mxc_ccm_reg *)CCM_BASE_ADDR;
 	struct ocotp_regs *ocotp = (struct ocotp_regs *)OCOTP_BASE_ADDR;
+	struct mxc_ccm_reg *mxc_ccm = (struct mxc_ccm_reg *)CCM_BASE_ADDR;
 	struct fuse_bank *bank = &ocotp->bank[1];
 	struct fuse_bank1_regs *fuse_bank1 =
 			(struct fuse_bank1_regs *)bank->fuse_regs;
+	unsigned int ccm_ccgr2;
+	u32 fuse;
+
+	/* enable OCOTP_CTRL clock in CCGR2 */
+	ccm_ccgr2 = readl(&mxc_ccm->CCGR2);
+	writel(ccm_ccgr2 | MXC_CCM_CCGR2_OCOTP_CTRL_MASK, &mxc_ccm->CCGR2);
+
+	/* Read temp parameters from fuses */
+	fuse = readl(&fuse_bank1->ana1);
+
+	/* restore CCGR2 */
+	writel(ccm_ccgr2, &mxc_ccm->CCGR2);
+
+	return fuse;
+}
+
+static int read_cpu_temperature(void)
+{
+	int temperature;
+	unsigned int reg, tmp;
+	unsigned int raw_25c, raw_n40c, ratio;
+	struct anatop_regs *anatop = (struct anatop_regs *)ANATOP_BASE_ADDR;
+	u32 fuse;
 
 	/* need to make sure pll3 is enabled for thermal sensor */
 	if ((readl(&anatop->usb1_pll_480_ctrl) &
@@ -208,14 +222,7 @@ static int read_cpu_temperature(void)
 				&anatop->usb1_pll_480_ctrl_set);
 	}
 
-	ccm_ccgr2 = readl(&mxc_ccm->CCGR2);
-	/* enable OCOTP_CTRL clock in CCGR2 */
-	writel(ccm_ccgr2 | MXC_CCM_CCGR2_OCOTP_CTRL_MASK, &mxc_ccm->CCGR2);
-	fuse = readl(&fuse_bank1->ana1);
-
-	/* restore CCGR2 */
-	writel(ccm_ccgr2, &mxc_ccm->CCGR2);
-
+	fuse = read_temp_fuse();
 	if (fuse == 0 || fuse == 0xffffffff || (fuse & 0xfff00000) == 0)
 		return TEMPERATURE_MIN;
 
@@ -235,7 +242,6 @@ static int read_cpu_temperature(void)
 	 * FACTOR2 is 4297157. Our ratio = -100 * slope
 	 */
 	ratio = ((FACTOR1 * raw_25c - FACTOR2) + 50000) / 100000;
-
 	debug("Thermal sensor with ratio = %d\n", ratio);
 
 	raw_n40c = raw_25c + (13 * ratio) / 20;
@@ -278,25 +284,32 @@ static int read_cpu_temperature(void)
 	return temperature;
 }
 
+#define OCOTP_HOT_TEMP_MASK	0xff
 void check_cpu_temperature(void)
 {
-	int cpu_tmp = 0;
+	int cpu_tmp, temp_max, temp_hot;
+	u32 fuse;
+
+	/* Set temperature limits for U-Boot depending on on the maximum die
+	 * temperature stored in the OCOTP fuses. This allows higher margin in
+	 * industrial and automotive rated i.MX6 SoCs
+	 */
+	fuse = read_temp_fuse();
+	temp_max = fuse & OCOTP_HOT_TEMP_MASK;
+	temp_hot = temp_max - CONFIG_BOOT_TEMP_BELOW_MAX;
+	debug("temp_max: %d C, temp_hot: %d C\n", temp_max, temp_hot);
 
 	cpu_tmp = read_cpu_temperature();
-	while (cpu_tmp > TEMPERATURE_MIN && cpu_tmp < TEMPERATURE_MAX) {
-		if (cpu_tmp >= TEMPERATURE_HOT) {
-			printf("CPU is %d C, too hot to boot, waiting...\n",
-				cpu_tmp);
-			udelay(5000000);
-			cpu_tmp = read_cpu_temperature();
-		} else
-			break;
+	while (cpu_tmp > temp_hot) {
+		printf("CPU is %d C, too hot to boot, waiting...\n", cpu_tmp);
+		udelay(5000000);
+		cpu_tmp = read_cpu_temperature();
 	}
-	if (cpu_tmp > TEMPERATURE_MIN && cpu_tmp < TEMPERATURE_MAX)
+	if (cpu_tmp < TEMPERATURE_MIN || cpu_tmp > temp_max)
+		printf("CPU:   WARNING. Measured temperature out of limits!\n");
+	else
 		printf("CPU:   Temperature %d C, calibration data: 0x%x\n",
 			cpu_tmp, fuse);
-	else
-		printf("CPU:   Temperature: can't get valid data!\n");
 }
 
 static void imx_reset_pfd(void)

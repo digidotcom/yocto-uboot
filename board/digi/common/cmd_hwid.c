@@ -25,7 +25,8 @@
 #include <fuse.h>
 #include <asm/errno.h>
 
-extern void board_print_hwid(u32 *hwid);
+#define OCOTP_LOCK_BANK		0
+#define OCOTP_LOCK_WORD		0
 
 static int strtou32(const char *str, unsigned int base, u32 *result)
 {
@@ -69,13 +70,23 @@ __weak void board_print_hwid(u32 *hwid)
 	printf("\n");
 }
 
+__weak void board_print_manufid(u32 *hwid)
+{
+	board_print_hwid(hwid);
+}
+
+__weak int manufstr_to_hwid(int argc, char *const argv[], u32 *val)
+{
+	printf("Undefined function for manufacturing string conversion\n");
+	return -EPERM;
+}
+
 static int do_hwid(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
 {
 	const char *op;
 	int confirmed = argc >= 3 && !strcmp(argv[2], "-y");
 	u32 bank = CONFIG_HWID_BANK;
 	u32 word = CONFIG_HWID_START_WORD;
-	u32 cnt = CONFIG_HWID_WORDS_NUMBER;
 	u32 val[8];
 	int ret, i;
 
@@ -86,22 +97,28 @@ static int do_hwid(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
 	argc -= 2 + confirmed;
 	argv += 2 + confirmed;
 
-	if (!strcmp(op, "read")) {
+	if (!strcmp(op, "read") || !strcmp(op, "read_manuf")) {
 		printf("Reading HWID: ");
-		for (i = 0; i < cnt; i++, word++) {
+		for (i = 0; i < CONFIG_HWID_WORDS_NUMBER; i++, word++) {
 			ret = fuse_read(bank, word, &val[i]);
 			if (ret)
 				goto err;
 		}
-		board_print_hwid(val);
-	} else if (!strcmp(op, "sense")) {
+		if (!strcmp(op, "read_manuf"))
+			board_print_manufid(val);
+		else
+			board_print_hwid(val);
+	} else if (!strcmp(op, "sense") || !strcmp(op, "sense_manuf")) {
 		printf("Sensing HWID: ");
-		for (i = 0; i < cnt; i++, word++) {
+		for (i = 0; i < CONFIG_HWID_WORDS_NUMBER; i++, word++) {
 			ret = fuse_sense(bank, word, &val[i]);
 			if (ret)
 				goto err;
 		}
-		board_print_hwid(val);
+		if (!strcmp(op, "sense_manuf"))
+			board_print_manufid(val);
+		else
+			board_print_hwid(val);
 	} else if (!strcmp(op, "prog")) {
 		if (argc < CONFIG_HWID_WORDS_NUMBER)
 			return CMD_RET_USAGE;
@@ -115,6 +132,20 @@ static int do_hwid(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
 			if (strtou32(argv[i], 16, &val[i]))
 				return CMD_RET_USAGE;
 
+			ret = fuse_prog(bank, word, val[i]);
+			if (ret)
+				goto err;
+		}
+		printf("OK\n");
+	} else if (!strcmp(op, "prog_manuf")) {
+		if (argc < 1)
+			return CMD_RET_USAGE;
+		if (manufstr_to_hwid(argc, argv, val))
+			return CMD_RET_FAILURE;
+		if (!confirmed && !confirm_prog())
+			return CMD_RET_FAILURE;
+		printf("Programming manufacturing information into HWID... ");
+		for (i = 0; i < CONFIG_HWID_WORDS_NUMBER; i++, word++) {
 			ret = fuse_prog(bank, word, val[i]);
 			if (ret)
 				goto err;
@@ -136,6 +167,29 @@ static int do_hwid(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
 				goto err;
 		}
 		printf("OK\n");
+	}  else if (!strcmp(op, "override_manuf")) {
+		if (argc < 1)
+			return CMD_RET_USAGE;
+		if (manufstr_to_hwid(argc, argv, val))
+			return CMD_RET_FAILURE;
+		printf("Overriding manufacturing information into HWID... ");
+		for (i = 0; i < CONFIG_HWID_WORDS_NUMBER; i++, word++) {
+			ret = fuse_override(bank, word, val[i]);
+			if (ret)
+				goto err;
+		}
+		printf("OK\n");
+	} else if (!strcmp(op, "lock")) {
+		if (!confirmed && !confirm_prog())
+			return CMD_RET_FAILURE;
+		printf("Locking HWID... ");
+		ret = fuse_prog(OCOTP_LOCK_BANK,
+				OCOTP_LOCK_WORD,
+				CONFIG_HWID_LOCK_FUSE);
+		if (ret)
+			goto err;
+		printf("OK\n");
+		printf("Locking of the HWID will be effective when the CPU is reset\n");
 	} else {
 		return CMD_RET_USAGE;
 	}
@@ -151,7 +205,120 @@ U_BOOT_CMD(
 	hwid, CONFIG_SYS_MAXARGS, 0, do_hwid,
 	"HWID on fuse sub-system",
 	     "read - read HWID from shadow registers\n"
+	"hwid read_manuf - read HWID from shadow registers and print manufacturing ID\n"
 	"hwid sense - sense HWID from fuses\n"
-	"hwid prog [-y] <hexval MSB> [.. <hexval LSB>] - program HWID (PERMANENT)\n"
-	"hwid override <hexval MSB> [.. <hexval LSB>] - override HWID"
+	"hwid sense_manuf - sense HWID from fuses and print manufacturing ID\n"
+	"hwid prog [-y] <high_word> <low_word> - program HWID (PERMANENT)\n"
+	"hwid prog_manuf [-y] " CONFIG_MANUF_STRINGS_HELP " - program HWID with manufacturing ID (PERMANENT)\n"
+	"hwid override <high_word> <low_word> - override HWID\n"
+	"hwid override_manuf " CONFIG_MANUF_STRINGS_HELP " - override HWID with manufacturing ID\n"
+	"hwid lock [-y] - lock HWID OTP bits (PERMANENT)\n"
 );
+
+#ifdef CONFIG_HAS_CARRIERBOARD_VERSION
+__weak void board_print_carrier_version(u32 version)
+{
+	printf("Carrier board: %s ", CONFIG_BOARD_DESCRIPTION);
+	if (CARRIERBOARD_VERSION_UNDEFINED == version)
+		printf("(undefined version)\n");
+	else
+		printf("v%d\n", version);
+}
+
+static int do_board_version(cmd_tbl_t *cmdtp, int flag, int argc,
+			    char *const argv[])
+{
+	const char *op;
+	int confirmed = argc >= 3 && !strcmp(argv[2], "-y");
+	u32 val, version;
+	int ret;
+
+	if (argc < 2)
+		return CMD_RET_USAGE;
+
+	op = argv[1];
+	argc -= 2 + confirmed;
+	argv += 2 + confirmed;
+
+	if (!strcmp(op, "read")) {
+		printf("Reading carrier board version...\n");
+		ret = fuse_read(CONFIG_CARRIERBOARD_VERSION_BANK,
+				CONFIG_CARRIERBOARD_VERSION_WORD, &val);
+		if (ret)
+			goto err;
+		version = (val >> CONFIG_CARRIERBOARD_VERSION_OFFSET) &
+			  CONFIG_CARRIERBOARD_VERSION_MASK;
+		board_print_carrier_version(version);
+	} else if (!strcmp(op, "sense")) {
+		printf("Sensing carrier board version...\n");
+		ret = fuse_sense(CONFIG_CARRIERBOARD_VERSION_BANK,
+				 CONFIG_CARRIERBOARD_VERSION_WORD, &val);
+		if (ret)
+			goto err;
+		version = (val >> CONFIG_CARRIERBOARD_VERSION_OFFSET) &
+			  CONFIG_CARRIERBOARD_VERSION_MASK;
+		board_print_carrier_version(version);
+	} else if (!strcmp(op, "prog")) {
+		if (argc < 1)
+			return CMD_RET_USAGE;
+
+		if (!confirmed && !confirm_prog())
+			return CMD_RET_FAILURE;
+
+		/* Validate input value */
+		strtou32(argv[0], 10, &val);
+		version = val & CONFIG_CARRIERBOARD_VERSION_MASK;
+		if (version != val) {
+			printf("Provided version %d does not fit into"
+			       "carrier board version mask: 0x%x\n", val,
+			       CONFIG_CARRIERBOARD_VERSION_MASK);
+			return CMD_RET_FAILURE;
+		}
+		version <<= CONFIG_CARRIERBOARD_VERSION_OFFSET;
+		printf("Programming carrier board version... ");
+		ret = fuse_prog(CONFIG_CARRIERBOARD_VERSION_BANK,
+				CONFIG_CARRIERBOARD_VERSION_WORD, version);
+		if (ret)
+			goto err;
+		printf("OK\n");
+	} else if (!strcmp(op, "override")) {
+		if (argc < 1)
+			return CMD_RET_USAGE;
+
+		/* Validate input value */
+		strtou32(argv[0], 10, &val);
+		version = val & CONFIG_CARRIERBOARD_VERSION_MASK;
+		if (version != val) {
+			printf("Provided version %d does not fit into"
+			       "carrier board version mask: 0x%x\n", val,
+			       CONFIG_CARRIERBOARD_VERSION_MASK);
+			return CMD_RET_FAILURE;
+		}
+		version <<= CONFIG_CARRIERBOARD_VERSION_OFFSET;
+		printf("Overriding carrier board version... ");
+		ret = fuse_override(CONFIG_CARRIERBOARD_VERSION_BANK,
+				    CONFIG_CARRIERBOARD_VERSION_WORD, version);
+		if (ret)
+			goto err;
+		printf("OK\n");
+	} else {
+		return CMD_RET_USAGE;
+	}
+
+	return 0;
+
+err:
+	puts("ERROR\n");
+	return ret;
+}
+
+U_BOOT_CMD(
+	board_version, CONFIG_SYS_MAXARGS, 0, do_board_version,
+	"Carrier board version on fuse sub-system",
+		      "read - read carrier board version from shadow registers\n"
+	"board_version sense - sense carrier board version from fuses\n"
+	"board_version prog [-y] <version> - program carrier board version (PERMANENT)\n"
+	"board_version override <version> - override carrier board version\n"
+	"\nNOTE: <version> parameter is in DECIMAL\n"
+);
+#endif /* CONFIG_HAS_CARRIERBOARD_VERSION */

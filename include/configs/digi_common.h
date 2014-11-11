@@ -75,6 +75,7 @@
 #define CONFIG_SOURCE
 #define CONFIG_AUTO_BOOTSCRIPT
 #define CONFIG_BOOTSCRIPT		CONFIG_SYS_BOARD "-boot.scr"
+#define CONFIG_CMD_TIME
 
 #define CONFIG_OVERWRITE_ETHADDR_ONCE
 #define CONFIG_DEFAULT_NETWORK_SETTINGS	\
@@ -87,6 +88,8 @@
 
 #define CONFIG_ROOTPATH		"/exports/nfsroot-" CONFIG_SYS_BOARD
 #define CONFIG_ENV_VARS_UBOOT_CONFIG
+
+#define CARRIERBOARD_VERSION_UNDEFINED	0
 
 /* ********** usb/mmc ********** */
 #define DEFAULT_KERNEL_FS		"fat"

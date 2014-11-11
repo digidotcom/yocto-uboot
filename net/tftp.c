@@ -223,8 +223,11 @@ store_block(int block, uchar *src, unsigned len)
 		if (otf_update_hook != NULL) {
 			otfd.buf = src;
 			otfd.len = len;
-			if (otf_update_hook(&otfd))
-				printf("Error writing on-the-fly\n");
+			if (otf_update_hook(&otfd)) {
+				printf("Error writing on-the-fly. Aborting\n");
+				net_set_state(NETLOOP_FAIL);
+				return;
+			}
 		}
 		else {
 			(void)memcpy((void *)(load_addr + offset), src, len);

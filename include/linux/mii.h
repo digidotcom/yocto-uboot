@@ -124,6 +124,9 @@
 #define NWAYTEST_RESV2		0xfe00	/* Unused...		       */
 
 /* 1000BASE-T Control register */
+#define MSTSLV_MANCONFIG_ENABLE	0x1000	/* Master-Slave manual config enable */
+#define MSTSLV_MANCONFIG_MASTER	0x0800	/* Master-Slave manual config MASTER */
+#define PORT_TYPE_MASTER	0x0400	/* Master-Slave manual config MASTER */
 #define ADVERTISE_1000FULL	0x0200	/* Advertise 1000BASE-T full duplex */
 #define ADVERTISE_1000HALF	0x0100	/* Advertise 1000BASE-T half duplex */
 

@@ -276,7 +276,7 @@ int lock_otp_reg(unsigned int addr)
 	return (blow_otp_reg(OTPREG_ADDR_LOCK, mask));
 }
 
-#ifdef CONFIG_PLATFORM_HAS_HWID
+#ifdef CONFIG_HAS_HWID
 int blow_otp_hwid(unsigned char *hwid)
 {
 	/*
@@ -329,6 +329,6 @@ int read_otp_hwid(unsigned char *hwid)
 
 	return 0;
 }
-#endif /* CONFIG_PLATFORM_HAS_HWID */
+#endif /* CONFIG_HAS_HWID */
 
 #endif /* CONFIG_MXS_OTP */

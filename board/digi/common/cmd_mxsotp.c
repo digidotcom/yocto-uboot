@@ -30,7 +30,7 @@
 
 #define MAX_OTP_REGS	0x28
 
-#ifdef CONFIG_PLATFORM_HAS_HWID
+#ifdef CONFIG_HAS_HWID
 void parse_hwid(const char *str, u8 *hwid)
 {
 	char *end;
@@ -63,7 +63,7 @@ static int do_otp(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 	else if (strcmp(argv[1], "read") == 0) {
 		if (argc < 3)
 			return CMD_RET_USAGE;
-#ifdef CONFIG_PLATFORM_HAS_HWID
+#ifdef CONFIG_HAS_HWID
 		if (!strcmp(argv[2], "hwid")) {
 			/* Read hwid */
 			/*
@@ -118,7 +118,7 @@ static int do_otp(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 			printf("Invalid number of arguments\n");
 			return CMD_RET_USAGE;
 		}
-#ifdef CONFIG_PLATFORM_HAS_HWID
+#ifdef CONFIG_HAS_HWID
 		if(!strcmp(argv[2], "hwid")) {
 			/* Write hwid */
 			u8 hwid[CONFIG_HWID_LENGTH] = {0};
@@ -178,11 +178,11 @@ U_BOOT_CMD(otp, 4, 0, do_otp,
 	"Warning: all numbers in parameter are in hex format!\n"
 	"otp dump                                - Dump all OTP bits\n"
 	"otp read <addr> [count]                 - Read 'count' OTP registers (32-bit wide) starting at 'addr'\n"
-#ifdef CONFIG_PLATFORM_HAS_HWID
+#ifdef CONFIG_HAS_HWID
 	"otp read hwid                           - Read hwid value\n"
 #endif
 	"otp blow <addr> <value>                 - Blow OTP register at 'addr' with 'value'\n"
-#ifdef CONFIG_PLATFORM_HAS_HWID
+#ifdef CONFIG_HAS_HWID
 	"otp blow hwid ##:##:##:##:##:##:##:##   - Blow hwid value\n"
 #endif
 	"otp lock <addr>                         - Lock register at 'addr'\n"

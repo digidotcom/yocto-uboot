@@ -103,7 +103,7 @@ extern void NvPrivOSPrintf( const char* szFormat, ...);
 extern void NvPrivOSPrintfError( const char* szFormat, ...);
 extern int  NvPrivImageRepair( void );
 
-#ifdef CONFIG_PLATFORM_HAS_HWID
+#ifdef CONFIG_HAS_HWID
 /* This functions are implemented in the platform code */
 extern void NvPrintHwID(void);
 extern int array_to_hwid(u8 *hwid);

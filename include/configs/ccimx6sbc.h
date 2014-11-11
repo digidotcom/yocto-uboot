@@ -25,7 +25,7 @@
 #define CONFIG_BOARD_DESCRIPTION	"ConnectCore 6 SBC"
 #define CONFIG_MXC_UART_BASE		UART4_BASE
 #define CONFIG_CONSOLE_DEV		"ttymxc3"
-#define CONFIG_DEFAULT_FDT_FILE		"uImage-imx6-" CONFIG_SYS_BOARD "-ldo.dtb"
+#define CONFIG_DEFAULT_FDT_FILE		"uImage-imx6q-" CONFIG_SYS_BOARD ".dtb"
 
 #define CONFIG_SYS_FSL_USDHC_NUM	2
 #define CONFIG_MMCDEV_USDHC4		0	/* mmc index for SHDC4 (eMMC) */
@@ -43,5 +43,19 @@
 /* Ethernet PHY */
 #define CONFIG_PHY_MICREL
 #define CONFIG_ENET_PHYADDR_MICREL	3
+
+/* Carrier board version in OTP bits */
+#define CONFIG_HAS_CARRIERBOARD_VERSION
+#ifdef CONFIG_HAS_CARRIERBOARD_VERSION
+/* For the SBC, the carrier board version is stored in Bank 4 Word 6 (GP1)
+ * in the lower 4 bits */
+#define CONFIG_CARRIERBOARD_VERSION_BANK	4
+#define CONFIG_CARRIERBOARD_VERSION_WORD	6
+#define CONFIG_CARRIERBOARD_VERSION_MASK	0xf	/* 4 OTP bits */
+#define CONFIG_CARRIERBOARD_VERSION_OFFSET	0	/* lower 4 OTP bits */
+#endif /* CONFIG_HAS_CARRIERBOARD_VERSION */
+
+/* Celsius degrees below CPU's max die temp at which boot should be attempted */
+#define CONFIG_BOOT_TEMP_BELOW_MAX		10
 
 #endif                         /* __CCIMX6SBC_CONFIG_H */

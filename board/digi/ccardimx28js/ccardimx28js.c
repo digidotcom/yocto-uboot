@@ -276,7 +276,7 @@ void mx28_adjust_mac(int dev_id, unsigned char *mac)
 
 #endif
 
-#if defined(CONFIG_PLATFORM_HAS_HWID)
+#if defined(CONFIG_HAS_HWID)
 static int is_valid_hw_id(u8 variant)
 {
 	if (variant < ARRAY_SIZE(ccardimx28_id))
@@ -387,7 +387,7 @@ void fdt_fixup_hwid(void *fdt)
 		do_fixup_by_path(fdt, "/", propnames[i], str, strlen(str), 1);
 	}
 }
-#endif /* CONFIG_PLATFORM_HAS_HWID */
+#endif /* CONFIG_HAS_HWID */
 
 void fdt_fixup_bluetooth_mac(void *fdt)
 {
@@ -429,9 +429,9 @@ void fdt_fixup_wireless_mac(void *fdt)
  */
 void ft_board_setup(void *blob, bd_t *bd)
 {
-#if defined(CONFIG_PLATFORM_HAS_HWID)
+#if defined(CONFIG_HAS_HWID)
 	fdt_fixup_hwid(blob);
-#endif /* CONFIG_PLATFORM_HAS_HWID */
+#endif /* CONFIG_HAS_HWID */
 
 	fdt_fixup_bluetooth_mac(blob);
 	fdt_fixup_wireless_mac(blob);

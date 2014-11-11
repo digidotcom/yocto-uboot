@@ -190,7 +190,7 @@ static void NvPrivPrintParamOSTable(
 static const nv_param_t l_axArg[] = {
         /* module */
         { "module",      NVAT_ACTION_MODE_SEL,   FOR_MODULE, OFFS_NONE, ALLOW_CHANGE_WHEN_FIXED },
-#ifdef CONFIG_PLATFORM_HAS_HWID
+#ifdef CONFIG_HAS_HWID
         { "hwid",        NVAT_PRODUCT_TYPE, FOR_MODULE, OFFS_MODULE( szProductType ) },
 #else
         { "producttype", NVAT_PRODUCT_TYPE, FOR_MODULE, OFFS_MODULE( szProductType ) },
@@ -507,7 +507,7 @@ static int NvPrivCriticalPrintContentsFromArgV(
         const nv_param_part_table_t*   pPartTable = &g_pWorkcopy->s.p.xPartTable;
         const nv_param_os_cfg_table_t* pOSTable   = &g_pWorkcopy->s.p.xOSTable;
         nv_param_mode_e eMode = NVPM_IP;
-#ifdef CONFIG_PLATFORM_HAS_HWID
+#ifdef CONFIG_HAS_HWID
         u8 *p = (u8 *)g_pWorkcopy->s.p.xID.szProductType;
 #endif
 
@@ -607,7 +607,7 @@ static int NvPrivCriticalPrintContentsFromArgV(
                         break;
 
                     case NVAT_PRODUCT_TYPE:  /* no break */
-#ifdef CONFIG_PLATFORM_HAS_HWID
+#ifdef CONFIG_HAS_HWID
 			{
 				int j;
 
@@ -747,7 +747,7 @@ error:
 	return 0;
 }
 
-#ifdef CONFIG_PLATFORM_HAS_HWID
+#ifdef CONFIG_HAS_HWID
 /* parse the HWID from a MAC style string */
 static int parse_hwid(u8 *hwid, char *str)
 {
@@ -879,7 +879,7 @@ cquotes:
                         CE_WRONG_VALUE( NvToMAC( (nv_mac_t*) pvAddr, parsed_arg ), parsed_arg );
                         break;
 
-#ifdef CONFIG_PLATFORM_HAS_HWID
+#ifdef CONFIG_HAS_HWID
                     case NVAT_PRODUCT_TYPE:
 			CE_WRONG_VALUE(parse_hwid((u8*)g_pWorkcopy->s.p.xID.szProductType, parsed_arg), parsed_arg);
 			(void)array_to_hwid( (u8 *)g_pWorkcopy->s.p.xID.szProductType );
@@ -1107,7 +1107,7 @@ static void NvPrivPrintParamModule(
 	const nv_param_module_id_t *pModule = &pNVRAM->s.p.xID;
 
         NvPrivOSPrintf( "  Module ID\n" );
-#ifdef CONFIG_PLATFORM_HAS_HWID
+#ifdef CONFIG_HAS_HWID
 	NvPrintHwID();
 #else
         NvPrivOSPrintf( "    P/N:          %s\n", pModule->szProductType );

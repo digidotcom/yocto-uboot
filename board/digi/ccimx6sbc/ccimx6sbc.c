@@ -47,6 +47,11 @@ iomux_v3_cfg_t const ksz9031_pads[] = {
 	MX6_PAD_ENET_CRS_DV__GPIO_1_25		| MUX_PAD_CTRL(NO_PAD_CTRL),
 };
 
+iomux_v3_cfg_t const sgtl5000_pads[] = {
+	/* SGTL5000 audio codec power enable (external 4K7 pull-up) */
+	MX6_PAD_EIM_OE__GPIO_2_25 | MUX_PAD_CTRL(NO_PAD_CTRL),
+};
+
 #ifdef CONFIG_I2C_MXC
 int setup_pmic_voltages(void)
 {
@@ -152,6 +157,23 @@ int board_eth_init(bd_t *bis)
 	return 0;
 }
 
+static void setup_board_audio(void)
+{
+	/* SBC version 2 uses a GPIO to power enable the audio codec */
+	if (get_carrier_board_version() >= 2) {
+		int pwren_gpio = IMX_GPIO_NR(2, 25);
+
+		/* Power enable line IOMUX */
+		imx_iomux_v3_setup_multiple_pads(sgtl5000_pads,
+						 ARRAY_SIZE(sgtl5000_pads));
+		/* The codec does not have a reset line so after a reset the
+		 * codec may be active and spitting noise. Power it off by
+		 * pulling the power enable line down (it is externally
+		 * pulled-up, and thus audio codec is ON by default) */
+		gpio_direction_output(pwren_gpio , 0);
+	}
+}
+
 int board_early_init_f(void)
 {
 	setup_iomux_uart();
@@ -159,6 +181,8 @@ int board_early_init_f(void)
 #ifdef CONFIG_CMD_SATA
 	setup_sata();
 #endif
+	setup_board_audio();
+
 	return 0;
 }
 
