@@ -2,6 +2,11 @@
 U-Boot RELEASE NOTES
 --------------------
 
+v2009.08 - DUB-1.6.4.1, released on 2014/04/11
+        - Added support for Micrel PHY KSZ8081RNA on i.MX28
+	  based platforms.
+
+
 v2009.08 - DUB-1.6.3.1, released on 2013/11/13
 	- Updated version string to match tag
 
