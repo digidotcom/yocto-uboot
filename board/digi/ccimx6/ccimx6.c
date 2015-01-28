@@ -493,6 +493,20 @@ int ccimx6_late_init(void)
 	}
 #endif
 
+	/* TODO: move dynamic variable generation to a common place */
+	/* If undefined, calculate 'verifyaddr' as halfway through the RAM
+	 * from $loadaddr.
+	 */
+	if (NULL == getenv("verifyaddr")) {
+		u32 verifyaddr = CONFIG_LOADADDR +
+			((gd->ram_size - (CONFIG_LOADADDR - PHYS_SDRAM)) / 2);
+		u32 loadaddr = simple_strtol(getenv("loadaddr"), NULL, 16);
+
+		if (verifyaddr > loadaddr &&
+		    verifyaddr < (PHYS_SDRAM + gd->ram_size))
+			setenv_hex("verifyaddr", verifyaddr);
+	}
+
 	return 0;
 }
 
@@ -893,7 +907,7 @@ static int write_chunk(struct mmc *mmc, otf_data_t *otfd, unsigned int dstblk,
 	/* Verify written chunk if $loadaddr + chunk size does not overlap
 	 * $verifyaddr (where the read-back copy will be placed)
 	 */
-	verifyaddr = getenv_ulong("verifyaddr", 16, CONFIG_VERIFYADDR);
+	verifyaddr = getenv_ulong("verifyaddr", 16, 0);
 	if (otfd->loadaddr + sectors * mmc_dev->blksz < verifyaddr) {
 		/* Read back data... */
 		printf("Reading back chunk...\n");

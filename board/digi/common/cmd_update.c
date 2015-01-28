@@ -20,6 +20,10 @@ extern void register_mmc_otf_update_hook(int (*hook)(otf_data_t *oftd),
 					  disk_partition_t*);
 extern void unregister_mmc_otf_update_hook(void);
 
+#define UNDEFINED_LOADADDR	0xffffffff
+unsigned long loadaddr = UNDEFINED_LOADADDR;
+unsigned long filesize = 0;
+
 int register_otf_hook(int src, int (*hook)(otf_data_t *oftd),
 		       disk_partition_t *partition)
 {
@@ -67,9 +71,7 @@ enum {
 static int write_firmware(char *partname, disk_partition_t *info)
 {
 	char cmd[CONFIG_SYS_CBSIZE] = "";
-	char *filesize_str = getenv("filesize");
-	unsigned long filesize;
-	unsigned long size_blks, loadaddr, verifyaddr, u, m;
+	unsigned long size_blks, verifyaddr, u, m;
 	block_dev_desc_t *mmc_dev;
 
 	mmc_dev = mmc_get_dev(CONFIG_SYS_STORAGE_DEV);
@@ -78,12 +80,8 @@ static int write_firmware(char *partname, disk_partition_t *info)
 		return -1;
 	}
 
-	if (NULL == filesize_str) {
-		debug("Cannot determine filesize\n");
-		return -1;
-	}
-
-	filesize = simple_strtoul(filesize_str, NULL, 16);
+	if (filesize == 0)
+		filesize = getenv_ulong("filesize", 16, 0);
 	size_blks = (filesize / mmc_dev->blksz) + (filesize % mmc_dev->blksz != 0);
 
 	if (size_blks > info->size) {
@@ -109,10 +107,12 @@ static int write_firmware(char *partname, disk_partition_t *info)
 		return -1;
 	}
 
+	if (UNDEFINED_LOADADDR == loadaddr)
+		loadaddr = getenv_ulong("loadaddr", 16, CONFIG_LOADADDR);
+
 	/* Write firmware command */
-	printf("Writing firmware...\n");
-	sprintf(cmd, "%s write $loadaddr %lx %lx", CONFIG_SYS_STORAGE_MEDIA,
-		info->start, size_blks);
+	sprintf(cmd, "%s write %lx %lx %lx", CONFIG_SYS_STORAGE_MEDIA,
+		loadaddr, info->start, size_blks);
 	if (run_command(cmd, 0))
 		return ERR_WRITE;
 
@@ -129,8 +129,7 @@ static int write_firmware(char *partname, disk_partition_t *info)
 	 *  M = last address of SDRAM (CONFIG_DDR_MB (size of SDRAM) + P)
 	 *  U = SDRAM address where U-Boot is located (plus margin)
 	 */
-	loadaddr = getenv_ulong("loadaddr", 16, CONFIG_LOADADDR);
-	verifyaddr = getenv_ulong("verifyaddr", 16, CONFIG_VERIFYADDR);
+	verifyaddr = getenv_ulong("verifyaddr", 16, 0);
 	m = PHYS_SDRAM + (CONFIG_DDR_MB * 1024 * 1024);
 	u = m - CONFIG_UBOOT_RESERVED;
 
@@ -177,12 +176,9 @@ static int write_firmware(char *partname, disk_partition_t *info)
 static int write_file(char *targetfilename, char *targetfs, int part)
 {
 	char cmd[CONFIG_SYS_CBSIZE] = "";
-	char *filesize = getenv("filesize");
 
-	if (NULL == filesize) {
-		debug("Cannot determine filesize\n");
-		return -1;
-	}
+	if (filesize == 0)
+		filesize = getenv_ulong("filesize", 16, 0);
 
 	/* Change to storage device */
 	sprintf(cmd, "%s dev %d", CONFIG_SYS_STORAGE_MEDIA,
@@ -192,10 +188,13 @@ static int write_file(char *targetfilename, char *targetfs, int part)
 		return -1;
 	}
 
+	if (UNDEFINED_LOADADDR == loadaddr)
+		loadaddr = getenv_ulong("loadaddr", 16, CONFIG_LOADADDR);
+
 	/* Prepare write command */
-	sprintf(cmd, "%swrite %s %d:%d $loadaddr %s %s", targetfs,
+	sprintf(cmd, "%swrite %s %d:%d %lx %s %lx", targetfs,
 		CONFIG_SYS_STORAGE_MEDIA, CONFIG_SYS_STORAGE_DEV, part,
-		targetfilename, filesize);
+		loadaddr, targetfilename, filesize);
 
 	return run_command(cmd, 0);
 }
@@ -238,6 +237,10 @@ static int do_update(cmd_tbl_t* cmdtp, int flag, int argc, char * const argv[])
 	if (argc < 2)
 		return CMD_RET_USAGE;
 
+	/* Initialize global variables loadaddr and filesize */
+	loadaddr = UNDEFINED_LOADADDR;
+	filesize = 0;
+
 	/* Get data of partition to be updated */
 	ret = get_target_partition(argv[1], &info);
 	if (ret) {
@@ -268,14 +271,23 @@ static int do_update(cmd_tbl_t* cmdtp, int flag, int argc, char * const argv[])
 		}
 	}
 
-	/* Get firmware file name */
-	ret = get_fw_filename(argc, argv, src, filename);
-	if (ret) {
-		/* Filename was not provided. Look for default one */
-		ret = get_default_filename(argv[1], filename, CMD_UPDATE);
+	if (src == SRC_RAM) {
+		/* Get address in RAM where firmware file is */
+		if (argc > 3)
+			loadaddr = simple_strtol(argv[3], NULL, 16);
+		/* Get filesize */
+		if (argc > 4)
+			filesize = simple_strtol(argv[4], NULL, 16);
+	} else {
+		/* Get firmware file name */
+		ret = get_fw_filename(argc, argv, src, filename);
 		if (ret) {
-			printf("Error: need a filename\n");
-			return CMD_RET_USAGE;
+			/* Filename was not provided. Look for default one */
+			ret = get_default_filename(argv[1], filename, CMD_UPDATE);
+			if (ret) {
+				printf("Error: need a filename\n");
+				return CMD_RET_USAGE;
+			}
 		}
 	}
 
@@ -303,15 +315,18 @@ static int do_update(cmd_tbl_t* cmdtp, int flag, int argc, char * const argv[])
 		}
 	}
 
-	/* Load firmware file to RAM */
-	ret = load_firmware(src, filename, devpartno, fs, "$loadaddr", NULL);
-	if (ret == LDFW_ERROR) {
-		printf("Error loading firmware file to RAM\n");
-		ret = CMD_RET_FAILURE;
-		goto _ret;
-	} else if (ret == LDFW_LOADED && otf) {
-		ret = CMD_RET_SUCCESS;
-		goto _ret;
+	if (src != SRC_RAM) {
+		/* Load firmware file to RAM */
+		ret = load_firmware(src, filename, devpartno, fs, "$loadaddr",
+				    NULL);
+		if (ret == LDFW_ERROR) {
+			printf("Error loading firmware file to RAM\n");
+			ret = CMD_RET_FAILURE;
+			goto _ret;
+		} else if (ret == LDFW_LOADED && otf) {
+			ret = CMD_RET_SUCCESS;
+			goto _ret;
+		}
 	}
 
 	/* Write firmware file from RAM to storage */
@@ -416,6 +431,10 @@ static int do_updatefile(cmd_tbl_t* cmdtp, int flag, int argc,
 
 	if (argc < 2)
 		return CMD_RET_USAGE;
+
+	/* Initialize global variables loadaddr and filesize */
+	loadaddr = UNDEFINED_LOADADDR;
+	filesize = 0;
 
 	/* Get data of partition to be updated */
 	part = get_partition_byname(CONFIG_SYS_STORAGE_MEDIA,

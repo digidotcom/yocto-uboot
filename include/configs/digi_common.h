@@ -143,9 +143,11 @@
 	"       - filename: file to transfer (if not provided, filename will\n" \
 	"                   will be taken from variable '<partition>_file')\n"
 #define DIGICMD_ARG_IMGADDR_HELP	\
-	"       - image_address: address of image in RAM\n"
+	"       - image_address: address of image in RAM\n" \
+	"                        ($loadaddr if not provided)\n"
 #define DIGICMD_ARG_IMGSIZE_HELP	\
-	"       - image_size: size of image in RAM\n"
+	"       - image_size: size of image in RAM\n" \
+	"                    ($filesize if not provided)\n"
 #define DIGICMD_ARG_SOURCEFILE_HELP	\
 	"       - source_file: file to transfer\n"
 #define DIGICMD_ARG_TARGETFILE_HELP	\
@@ -165,7 +167,7 @@
 		DIGICMD_ARG_FILESYS_HELP \
 		DIGICMD_ARG_FILENAME_HELP
 #define DIGICMD_UPDATE_RAM_ARGS_HELP	\
-	"      source=ram -> <image_address> <image_size>\n" \
+	"      source=ram -> [image_address] [image_size]\n" \
 		DIGICMD_ARG_IMGADDR_HELP \
 		DIGICMD_ARG_IMGSIZE_HELP
 
@@ -190,7 +192,7 @@
 		DIGICMD_ARG_TARGETFILESYS_HELP
 #define DIGICMD_UPDATEFILE_RAM_ARGS_HELP	\
 	"      source=ram -> "\
-	"<image_address> <image_size> [targetfile] [target_fs]\n" \
+	"[image_address] [image_size] [targetfile] [target_fs]\n" \
 		DIGICMD_ARG_IMGADDR_HELP \
 		DIGICMD_ARG_IMGSIZE_HELP \
 		DIGICMD_ARG_TARGETFILE_HELP \

@@ -123,24 +123,29 @@
 
 #define CONFIG_SUPPORTED_SOURCES	((1 << SRC_TFTP) | \
 					 (1 << SRC_NFS) | \
-					 (1 << SRC_MMC))
+					 (1 << SRC_MMC) | \
+					 (1 << SRC_RAM))
 #define CONFIG_SUPPORTED_SOURCES_NET	"tftp|nfs"
 #define CONFIG_SUPPORTED_SOURCES_BLOCK	"mmc"
+#define CONFIG_SUPPORTED_SOURCES_RAM	"ram"
 #define CONFIG_DBOOT_SUPPORTED_SOURCES_LIST	\
 	CONFIG_SUPPORTED_SOURCES_NET "|" \
 	CONFIG_SUPPORTED_SOURCES_BLOCK
 #define CONFIG_UPDATE_SUPPORTED_SOURCES_LIST	\
 	CONFIG_SUPPORTED_SOURCES_NET "|" \
-	CONFIG_SUPPORTED_SOURCES_BLOCK
+	CONFIG_SUPPORTED_SOURCES_BLOCK "|" \
+	CONFIG_SUPPORTED_SOURCES_RAM
 #define CONFIG_DBOOT_SUPPORTED_SOURCES_ARGS_HELP	\
 	DIGICMD_DBOOT_NET_ARGS_HELP "\n" \
 	DIGICMD_DBOOT_BLOCK_ARGS_HELP
 #define CONFIG_UPDATE_SUPPORTED_SOURCES_ARGS_HELP	\
 	DIGICMD_UPDATE_NET_ARGS_HELP "\n" \
-	DIGICMD_UPDATE_BLOCK_ARGS_HELP
+	DIGICMD_UPDATE_BLOCK_ARGS_HELP "\n" \
+	DIGICMD_UPDATE_RAM_ARGS_HELP
 #define CONFIG_UPDATEFILE_SUPPORTED_SOURCES_ARGS_HELP	\
 	DIGICMD_UPDATEFILE_NET_ARGS_HELP "\n" \
-	DIGICMD_UPDATEFILE_BLOCK_ARGS_HELP
+	DIGICMD_UPDATEFILE_BLOCK_ARGS_HELP "\n" \
+	DIGICMD_UPDATEFILE_RAM_ARGS_HELP
 
 #define CONFIG_BOOTDELAY               1
 
@@ -148,11 +153,6 @@
 #define CONFIG_SYS_TEXT_BASE		0x17800000
 /* RAM memory reserved for U-Boot, stack, malloc pool... */
 #define CONFIG_UBOOT_RESERVED		(10 * 1024 * 1024)
-
-/* RAM Address to do firmware update verification (half way from $loadaddr
- * to the top of the RAM)
- */
-#define CONFIG_VERIFYADDR		0x31000000
 
 /* Pool of randomly generated UUIDs at host machine */
 #define RANDOM_UUIDS	\
@@ -207,7 +207,6 @@
 #define CONFIG_EXTRA_ENV_SETTINGS \
 	CONFIG_DEFAULT_NETWORK_SETTINGS \
 	RANDOM_UUIDS \
-	"verifyaddr=" __stringify(CONFIG_VERIFYADDR) "\0" \
 	"script=boot.scr\0" \
 	"loadscript=fatload mmc ${mmcdev}:${mmcpart} ${loadaddr} ${script}\0" \
 	"uimage=uImage-" CONFIG_SYS_BOARD ".bin\0" \
@@ -295,6 +294,7 @@
 			"fi;" \
 		"fi;\0" \
 	"bootargs_android=\"androidboot.hardware=freescale " \
+		"mem=" __stringify(CONFIG_DDR_MB) "M " \
 		"fbmem=28M vmalloc=400M\"\0" \
 	"bootargs_mmc_android=setenv bootargs console=${console},${baudrate} " \
 		"${bootargs_android} androidboot.mmcdev=${mmcdev} " \

@@ -3,7 +3,7 @@
 #
 #  jenkins.sh
 #
-#  Copyright (C) 2014 by Digi International Inc.
+#  Copyright (C) 2015 by Digi International Inc.
 #  All rights reserved.
 #
 #  This program is free software; you can redistribute it and/or modify it
@@ -22,17 +22,15 @@
 
 set -e
 
-AVAILABLE_PLATFORMS=" \
-	ccimx6adpt \
-	ccimx6sbc \
-"
-
-# <platform> <uboot_make_target>
-while read pl mt; do
+# <platform> <uboot_make_target> <toolchain_type>
+while read pl mt tt; do
+	AVAILABLE_PLATFORMS="${AVAILABLE_PLATFORMS:+${AVAILABLE_PLATFORMS} }${pl}"
 	eval "${pl}_make_target=\"${mt}\""
+	eval "${pl}_toolchain_type=\"${tt}\""
 done<<-_EOF_
-	ccimx6adpt    u-boot.imx
-	ccimx6sbc     u-boot.imx
+	ccimx6qsbc       u-boot.imx  cortexa9hf
+	ccimx6qsbc512MB  u-boot.imx  cortexa9hf
+	ccimx6dlsbc      u-boot.imx  cortexa9hf
 _EOF_
 
 # Set default values if not provided by Jenkins
@@ -66,37 +64,44 @@ if pushd ${DUB_UBOOT_DIR}; then
 		git checkout ${DUB_REVISION}
 	fi
 
-	# Install toolchain
-	for tlabel in ${DUB_REVISION_SANE} default; do
-		if wget -q --spider "${DUB_TOOLCHAIN_URL}/toolchain-${tlabel}.sh"; then
-			printf "\n[INFO] Installing toolchain-${tlabel}.sh\n\n"
-			tmp_toolchain="$(mktemp /tmp/toolchain.XXXXXX)"
-			wget -q -O ${tmp_toolchain} "${DUB_TOOLCHAIN_URL}/toolchain-${tlabel}.sh"
-			sh ${tmp_toolchain} -y -d ${DUB_TOOLCHAIN_DIR}
-			rm -f ${tmp_toolchain}
-			break
-		fi
-	done
-
-	eval $(grep "^export CROSS_COMPILE=" ${DUB_TOOLCHAIN_DIR}/environment-setup-*)
-	eval $(grep "^export PATH=" ${DUB_TOOLCHAIN_DIR}/environment-setup-*)
-	eval $(grep "^export SDKTARGETSYSROOT=" ${DUB_TOOLCHAIN_DIR}/environment-setup-*)
-
 	CPUS="$(echo /sys/devices/system/cpu/cpu[0-9]* | wc -w)"
 	[ ${CPUS} -gt 1 ] && MAKE_JOBS="-j${CPUS}"
 
 	for platform in ${DUB_PLATFORMS}; do
-		printf "\n[PLATFORM: ${platform} - CPUS: ${CPUS}]\n"
+		# Build in a sub-shell to avoid mixing environments for different platform
+		(
+			printf "\n[PLATFORM: ${platform} - CPUS: ${CPUS}]\n"
 
-		# We need to explicitly pass the CC variable. Otherwise u-boot discards the
-		# '--sysroot' option and the build fails
-		eval UBOOT_MAKE_TARGET=\"\${${platform}_make_target}\"
-		make distclean
-		make ${platform}_config
-		make ${MAKE_JOBS} CC="${CROSS_COMPILE}gcc --sysroot=${SDKTARGETSYSROOT}" ${UBOOT_MAKE_TARGET}
+			# Install toolchain
+			eval TOOLCHAIN_TYPE=\"\${${platform}_toolchain_type}\"
+			for TLABEL in ${DUB_REVISION_SANE} default; do
+				TLABEL="${TLABEL}-${TOOLCHAIN_TYPE}"
+				# If the toolchain is already installed exit the loop
+				[ -d "${DUB_TOOLCHAIN_DIR}/${TLABEL}" ] && break
+				if wget -q --spider "${DUB_TOOLCHAIN_URL}/toolchain-${TLABEL}.sh"; then
+					printf "\n[INFO] Installing toolchain-${TLABEL}.sh\n\n"
+					tmp_toolchain="$(mktemp /tmp/toolchain.XXXXXX)"
+					wget -q -O ${tmp_toolchain} "${DUB_TOOLCHAIN_URL}/toolchain-${TLABEL}.sh"
+					rm -rf ${DUB_TOOLCHAIN_DIR}/${TLABEL} && sh ${tmp_toolchain} -y -d ${DUB_TOOLCHAIN_DIR}/${TLABEL}
+					rm -f ${tmp_toolchain}
+					break
+				fi
+			done
 
-		# Copy u-boot image
-		cp ${UBOOT_MAKE_TARGET} ${DUB_IMGS_DIR}/${UBOOT_MAKE_TARGET/u-boot/u-boot-${platform}}
+			eval $(grep "^export CROSS_COMPILE=" ${DUB_TOOLCHAIN_DIR}/${TLABEL}/environment-setup-*)
+			eval $(grep "^export PATH=" ${DUB_TOOLCHAIN_DIR}/${TLABEL}/environment-setup-*)
+			eval $(grep "^export SDKTARGETSYSROOT=" ${DUB_TOOLCHAIN_DIR}/${TLABEL}/environment-setup-*)
+
+			# We need to explicitly pass the CC variable. Otherwise u-boot discards the
+			# '--sysroot' option and the build fails
+			eval UBOOT_MAKE_TARGET=\"\${${platform}_make_target}\"
+			make distclean
+			make ${platform}_config
+			make ${MAKE_JOBS} CC="${CROSS_COMPILE}gcc --sysroot=${SDKTARGETSYSROOT}" ${UBOOT_MAKE_TARGET}
+
+			# Copy u-boot image
+			cp ${UBOOT_MAKE_TARGET} ${DUB_IMGS_DIR}/${UBOOT_MAKE_TARGET/u-boot/u-boot-${platform}}
+		)
 	done
 
 	popd

@@ -2,6 +2,16 @@
 Digi U-Boot RELEASE NOTES
 -------------------------
 
+v2013.04 - DUB-2.3.1.1, released on 2015/01/27
+	- Added support for variants:
+		0x03: Industrial quad 800MHz, 4GB eMMC, 512MB DDR3, -40/+85C
+		0x04: Industrial dual 800MHz, 4GB eMMC, 1GB DDR3, -40/+85C
+		0x0b: Consumer DualLite 1GHz, 4GB eMMC, 1GB DDR3, 0/+70C
+	- Added support to update from RAM address.
+	- Removed support for 'ccimx6adpt' (Early Availability carrier board).
+	- Pass 'mem=' cmdline parameter to Android.
+
+
 v2013.04 - DUB-2.3.0.3, released on 2014/09/09
 	- Add DDR3 calibration values for cavity-less module.
 	- Added CONFIG_BOOT_TEMP_BELOW_MAX to establish celsius degrees
