@@ -25,7 +25,11 @@
 #define CONFIG_BOARD_DESCRIPTION	"ConnectCore 6 SBC"
 #define CONFIG_MXC_UART_BASE		UART4_BASE
 #define CONFIG_CONSOLE_DEV		"ttymxc3"
+#if defined(CONFIG_MX6DL) || defined(CONFIG_MX6S)
+#define CONFIG_DEFAULT_FDT_FILE		"uImage-imx6dl-" CONFIG_SYS_BOARD ".dtb"
+#elif defined(CONFIG_MX6Q)
 #define CONFIG_DEFAULT_FDT_FILE		"uImage-imx6q-" CONFIG_SYS_BOARD ".dtb"
+#endif
 
 #define CONFIG_SYS_FSL_USDHC_NUM	2
 #define CONFIG_MMCDEV_USDHC4		0	/* mmc index for SHDC4 (eMMC) */

@@ -1044,10 +1044,18 @@ void TftpStart(enum proto_t protocol)
 		else
 #endif /* CONFIG_TFTP_UPDATE_ONTHEFLY */
 		{
-			if (otf_update_hook)
-				printf("Loading and updating on-the-fly: \n\t");
-			else
+			if (otf_update_hook) {
+				printf("Loading and updating on-the-fly: \n");
+				printf("+-------------------------------------------------+\n"
+				       "|                   IMPORTANT!                    |\n"
+				       "|                                                 |\n"
+				       "| Cancelling on-the-fly update process will leave |\n"
+				       "| the partition partially written, and may result |\n"
+				       "| in an non-booting operating system.             |\n"
+				       "+-------------------------------------------------+\n\t");
+			} else {
 				puts("Loading: *\b");
+			}
 		}
 		TftpState = STATE_SEND_RRQ;
 	}

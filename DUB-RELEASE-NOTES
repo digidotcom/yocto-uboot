@@ -2,6 +2,16 @@
 Digi U-Boot RELEASE NOTES
 -------------------------
 
+v2013.04 - DUB-2.3.2.1, released on 2015/02/04
+	- Added DDR3 calibration data for variants:
+		0x03: Industrial quad 800MHz, 4GB eMMC, 512MB DDR3, -40/+85C
+		0x04: Industrial dual 800MHz, 4GB eMMC, 1GB DDR3, -40/+85C
+	- Update DDR3 calibration values basing on variant coded in HWID.
+	- Auto-activate OTF update mechanism when target partition is larger
+	  than available RAM.
+	- Disable SATA for Solo/DualLite variants.
+
+
 v2013.04 - DUB-2.3.1.1, released on 2015/01/27
 	- Added support for variants:
 		0x03: Industrial quad 800MHz, 4GB eMMC, 512MB DDR3, -40/+85C

@@ -63,8 +63,10 @@
 #define CONFIG_CMD_PART
 
 /* SATA Configs */
-
+#if defined(CONFIG_MX6Q)
 #define CONFIG_CMD_SATA
+#endif
+
 #ifdef CONFIG_CMD_SATA
 #define CONFIG_DWC_AHSATA
 #define CONFIG_SYS_SATA_MAX_DEVICE      1

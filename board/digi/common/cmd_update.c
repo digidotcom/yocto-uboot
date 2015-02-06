@@ -12,6 +12,8 @@
 #include <part.h>
 #include "helper.h"
 
+DECLARE_GLOBAL_DATA_PTR;
+
 extern int board_update_chunk(otf_data_t *oftd);
 extern void register_tftp_otf_update_hook(int (*hook)(otf_data_t *oftd),
 					  disk_partition_t*);
@@ -19,10 +21,6 @@ extern void unregister_tftp_otf_update_hook(void);
 extern void register_mmc_otf_update_hook(int (*hook)(otf_data_t *oftd),
 					  disk_partition_t*);
 extern void unregister_mmc_otf_update_hook(void);
-
-#define UNDEFINED_LOADADDR	0xffffffff
-unsigned long loadaddr = UNDEFINED_LOADADDR;
-unsigned long filesize = 0;
 
 int register_otf_hook(int src, int (*hook)(otf_data_t *oftd),
 		       disk_partition_t *partition)
@@ -68,7 +66,8 @@ enum {
 	ERR_VERIFY,
 };
 
-static int write_firmware(char *partname, disk_partition_t *info)
+static int write_firmware(char *partname, unsigned long loadaddr,
+			  unsigned long filesize, disk_partition_t *info)
 {
 	char cmd[CONFIG_SYS_CBSIZE] = "";
 	unsigned long size_blks, verifyaddr, u, m;
@@ -80,8 +79,6 @@ static int write_firmware(char *partname, disk_partition_t *info)
 		return -1;
 	}
 
-	if (filesize == 0)
-		filesize = getenv_ulong("filesize", 16, 0);
 	size_blks = (filesize / mmc_dev->blksz) + (filesize % mmc_dev->blksz != 0);
 
 	if (size_blks > info->size) {
@@ -106,9 +103,6 @@ static int write_firmware(char *partname, disk_partition_t *info)
 		debug("Cannot change to storage device\n");
 		return -1;
 	}
-
-	if (UNDEFINED_LOADADDR == loadaddr)
-		loadaddr = getenv_ulong("loadaddr", 16, CONFIG_LOADADDR);
 
 	/* Write firmware command */
 	sprintf(cmd, "%s write %lx %lx %lx", CONFIG_SYS_STORAGE_MEDIA,
@@ -176,9 +170,10 @@ static int write_firmware(char *partname, disk_partition_t *info)
 static int write_file(char *targetfilename, char *targetfs, int part)
 {
 	char cmd[CONFIG_SYS_CBSIZE] = "";
+	unsigned long loadaddr, filesize;
 
-	if (filesize == 0)
-		filesize = getenv_ulong("filesize", 16, 0);
+	loadaddr = getenv_ulong("loadaddr", 16, CONFIG_LOADADDR);
+	filesize = getenv_ulong("filesize", 16, 0);
 
 	/* Change to storage device */
 	sprintf(cmd, "%s dev %d", CONFIG_SYS_STORAGE_MEDIA,
@@ -187,9 +182,6 @@ static int write_file(char *targetfilename, char *targetfs, int part)
 		debug("Cannot change to storage device\n");
 		return -1;
 	}
-
-	if (UNDEFINED_LOADADDR == loadaddr)
-		loadaddr = getenv_ulong("loadaddr", 16, CONFIG_LOADADDR);
 
 	/* Prepare write command */
 	sprintf(cmd, "%swrite %s %d:%d %lx %s %lx", targetfs,
@@ -223,6 +215,24 @@ static int emmc_bootselect(void)
 	return run_command(cmd, 0);
 }
 
+/*
+ * This function returns the size of available RAM holding a firmware transfer.
+ * This size depends on:
+ *   - The total RAM available
+ *   - The loadaddr
+ *   - The RAM occupied by U-Boot and its location
+ */
+static unsigned int get_available_ram_for_update(void)
+{
+	unsigned int loadaddr;
+	unsigned int la_off;
+
+	loadaddr = getenv_ulong("loadaddr", 16, CONFIG_LOADADDR);
+	la_off = loadaddr - gd->bd->bi_dram[0].start;
+
+	return (gd->bd->bi_dram[0].size - CONFIG_UBOOT_RESERVED - la_off);
+}
+
 static int do_update(cmd_tbl_t* cmdtp, int flag, int argc, char * const argv[])
 {
 	int src = SRC_TFTP;	/* default to TFTP */
@@ -232,14 +242,12 @@ static int do_update(cmd_tbl_t* cmdtp, int flag, int argc, char * const argv[])
 	int ret;
 	char filename[256] = "";
 	int otf = 0;
+	int otf_enabled = 0;
 	char cmd[CONFIG_SYS_CBSIZE] = "";
+	unsigned long loadaddr, filesize;
 
 	if (argc < 2)
 		return CMD_RET_USAGE;
-
-	/* Initialize global variables loadaddr and filesize */
-	loadaddr = UNDEFINED_LOADADDR;
-	filesize = 0;
 
 	/* Get data of partition to be updated */
 	ret = get_target_partition(argv[1], &info);
@@ -271,14 +279,33 @@ static int do_update(cmd_tbl_t* cmdtp, int flag, int argc, char * const argv[])
 		}
 	}
 
+	loadaddr = getenv_ulong("loadaddr", 16, CONFIG_LOADADDR);
 	if (src == SRC_RAM) {
 		/* Get address in RAM where firmware file is */
 		if (argc > 3)
 			loadaddr = simple_strtol(argv[3], NULL, 16);
+
 		/* Get filesize */
 		if (argc > 4)
 			filesize = simple_strtol(argv[4], NULL, 16);
 	} else {
+		/*
+		 * Check if there is enough RAM to hold the largest possible
+		 * file that fits into the partition.
+		 */
+		unsigned long avail = get_available_ram_for_update();
+		block_dev_desc_t *mmc_dev;
+
+		mmc_dev = mmc_get_dev(CONFIG_SYS_STORAGE_DEV);
+		if (avail <= info.size * mmc_dev->blksz) {
+			printf("Partition to update is larger (%d MiB) than the\n"
+			       "available RAM memory (%d MiB, starting at $loadaddr=0x%08x).\n",
+			       (int)(info.size * mmc_dev->blksz / (1024 * 1024)),
+			       (int)(avail / (1024 * 1024)),
+			       (unsigned int)loadaddr);
+			printf("Activating On-the-fly update mechanism.\n");
+			otf_enabled = 1;
+		}
 		/* Get firmware file name */
 		ret = get_fw_filename(argc, argv, src, filename);
 		if (ret) {
@@ -292,7 +319,7 @@ static int do_update(cmd_tbl_t* cmdtp, int flag, int argc, char * const argv[])
 	}
 
 	/* Activate on-the-fly update if needed */
-	if (getenv_yesno("otf-update") == 1) {
+	if (otf_enabled || (getenv_yesno("otf-update") == 1)) {
 		if (!strcmp((char *)info.name, "uboot")) {
 			/* Do not activate on-the-fly update for U-Boot */
 			printf("On-the-fly mechanism disabled for U-Boot "
@@ -330,7 +357,8 @@ static int do_update(cmd_tbl_t* cmdtp, int flag, int argc, char * const argv[])
 	}
 
 	/* Write firmware file from RAM to storage */
-	ret = write_firmware(argv[1], &info);
+	filesize = getenv_ulong("filesize", 16, 0);
+	ret = write_firmware(argv[1], loadaddr, filesize, &info);
 	if (ret) {
 		if (ret == ERR_READ)
 			printf("Error while reading back written firmware!\n");
@@ -431,10 +459,6 @@ static int do_updatefile(cmd_tbl_t* cmdtp, int flag, int argc,
 
 	if (argc < 2)
 		return CMD_RET_USAGE;
-
-	/* Initialize global variables loadaddr and filesize */
-	loadaddr = UNDEFINED_LOADADDR;
-	filesize = 0;
 
 	/* Get data of partition to be updated */
 	part = get_partition_byname(CONFIG_SYS_STORAGE_MEDIA,

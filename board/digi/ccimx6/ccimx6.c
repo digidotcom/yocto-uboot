@@ -23,6 +23,7 @@
 #include <asm/arch/clock.h>
 #include <asm/arch/imx-regs.h>
 #include <asm/arch/iomux.h>
+#include <asm/arch/mx6-ddr.h>
 #include <asm/arch/mx6-pins.h>
 #include <asm/errno.h>
 #include <asm/gpio.h>
@@ -106,6 +107,74 @@ struct i2c_pads_info i2c_pad_info2 = {
 };
 #endif
 #endif
+
+struct addrvalue {
+	u32 address;
+	u32 value;
+};
+
+#define NUM_VARIANTS	11
+
+/* DDR3 calibration values for the different CC6 variants @528MHz */
+struct addrvalue ddr3_calibration[NUM_VARIANTS + 1][12] = {
+	/* Variant 0x02 */
+	[2] = {
+		/* Write leveling */
+		{MX6_MMDC_P0_MPWLDECTRL0, 0x00070012},
+		{MX6_MMDC_P0_MPWLDECTRL1, 0x002C0020},
+		{MX6_MMDC_P1_MPWLDECTRL0, 0x001F0035},
+		{MX6_MMDC_P1_MPWLDECTRL1, 0x002E0030},
+		/* Read DQS gating */
+		{MX6_MMDC_P0_MPDGCTRL0, 0x432C0331},
+		{MX6_MMDC_P0_MPDGCTRL1, 0x03250328},
+		{MX6_MMDC_P1_MPDGCTRL0, 0x433E0346},
+		{MX6_MMDC_P1_MPDGCTRL1, 0x0336031C},
+		/* Read delay */
+		{MX6_MMDC_P0_MPRDDLCTL, 0x382B2F35},
+		{MX6_MMDC_P1_MPRDDLCTL, 0x31332A3B},
+		/* Write delay */
+		{MX6_MMDC_P0_MPWRDLCTL, 0x3938403A},
+		{MX6_MMDC_P1_MPWRDLCTL, 0x4430453D},
+	},
+	/* Variant 0x03 */
+	[3] = {
+		/* Write leveling */
+		{MX6_MMDC_P0_MPWLDECTRL0, 0x000C0019},
+		{MX6_MMDC_P0_MPWLDECTRL1, 0x00310024},
+		{0, 0},
+		{0, 0},
+		/* Read DQS gating */
+		{MX6_MMDC_P0_MPDGCTRL0, 0x43450348},
+		{MX6_MMDC_P0_MPDGCTRL1, 0x03330339},
+		{0, 0},
+		{0, 0},
+		/* Read delay */
+		{MX6_MMDC_P0_MPRDDLCTL, 0x3F38393C},
+		{0, 0},
+		/* Write delay */
+		{MX6_MMDC_P0_MPWRDLCTL, 0x3A3B433F},
+		{0, 0},
+	},
+	/* Variant 0x04 */
+	[4] = {
+		/* Write leveling */
+		{MX6_MMDC_P0_MPWLDECTRL0, 0x000B0018},
+		{MX6_MMDC_P0_MPWLDECTRL1, 0x00320023},
+		{MX6_MMDC_P1_MPWLDECTRL0, 0x00200038},
+		{MX6_MMDC_P1_MPWLDECTRL1, 0x00300033},
+		/* Read DQS gating */
+		{MX6_MMDC_P0_MPDGCTRL0, 0x43430345},
+		{MX6_MMDC_P0_MPDGCTRL1, 0x03370339},
+		{MX6_MMDC_P1_MPDGCTRL0, 0x43500356},
+		{MX6_MMDC_P1_MPDGCTRL1, 0x0348032A},
+		/* Read delay */
+		{MX6_MMDC_P0_MPRDDLCTL, 0x3E33353A},
+		{MX6_MMDC_P1_MPRDDLCTL, 0x37383141},
+		/* Write delay */
+		{MX6_MMDC_P0_MPWRDLCTL, 0x3B3A433D},
+		{MX6_MMDC_P1_MPWRDLCTL, 0x4633483E},
+	},
+};
 
 static int mx6_rgmii_rework(struct phy_device *phydev)
 {
@@ -456,9 +525,28 @@ static const struct boot_mode board_boot_modes[] = {
 };
 #endif
 
+void update_ddr3_calibration(u8 variant)
+{
+	int i;
+	volatile u32 *addr;
+
+	if (variant <= 0 || variant > NUM_VARIANTS)
+		return;
+
+	for (i = 0; i < ARRAY_SIZE(ddr3_calibration[variant]); i++) {
+		addr = (volatile u32 *)(ddr3_calibration[variant][i].address);
+		if (addr != NULL)
+			writel(ddr3_calibration[variant][i].value, addr);
+	}
+}
+
 int ccimx6_late_init(void)
 {
 	int ret = 0;
+
+	/* Override DDR3 calibration values basing on HWID variant */
+	update_ddr3_calibration(my_hwid.variant);
+
 #ifdef CONFIG_CMD_BMODE
 	add_board_boot_modes(board_boot_modes);
 #endif
