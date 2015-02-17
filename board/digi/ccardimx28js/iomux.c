@@ -27,35 +27,7 @@
 #include <asm/arch/iomux-mx28.h>
 #include <asm/arch/imx-regs.h>
 #include <asm/arch/sys_proto.h>
-
-struct ccardxmx28_ident {
-        const int       sdram;
-        const int       flash;
-        const char      *id_string;
-};
-
-/**
- * To add new valid variant ID, append new lines in this array with its configuration
- */
-struct ccardxmx28_ident ccardxmx28_id[] = {
-/* 0x00 */	        	{         0,     0, "Unknown"},
-/* 0x01 */	        	{         0,     0, "Not supported"},
-/* 0x02 - 55001667-01 */	{0x10000000,   256, "i.MX287, 2 Eth, 1 USB, Wireless, BT, LCD, JTAG, 1-wire"},
-/* 0x03 - 55001668-01 */	{0x10000000,   256, "i.MX287, 2 Eth, 1 USB, Wireless, BT, LCD, JTAG"},
-/* 0x04 - 55001669-01 */	{ 0x8000000,   128, "i.MX287, 1 Eth, 2 USB, Wireless, BT, LCD, JTAG"},
-/* 0x05 - 55001674-01 */	{ 0x8000000,   128, "i.MX287, 1 Eth, 2 USB, LCD, JTAG"},
-/* 0x06 - 55001670-01 */	{ 0x8000000,   128, "i.MX280, 2 USB, Wireless"},
-/* 0x07 - 55001671-01 */	{ 0x8000000,   128, "i.MX280, 1 Eth, 2 USB, Wireless, JTAG"},
-/* 0x08 - 55001672-01 */	{ 0x8000000,   128, "i.MX280, 1 Eth, 2 USB, Wireless"},
-/* 0x09 - 55001673-01 */	{ 0x8000000,   128, "i.MX280, 1 Eth, 2 USB"},
-/* SPR variants */
-/* 0x0a - 55001671-02 */	{ 0x8000000,   128, "i.MX283, 1 Eth, 2 USB, Wireless, LCD, JTAG"},
-/* 0x0b - 55001671-03 */	{ 0x8000000,   128, "i.MX283, 1 Eth, 2 USB, LCD, JTAG"},
-/* 0x0c - 55001674-02 */	{ 0x8000000,   128, "i.MX287, 2 Eth, 1 USB, LCD, JTAG"},
-/* 0x0d - 55001674-03 */	{ 0x8000000,   128, "i.MX287, 1 Eth, 2 USB, LCD, JTAG"},
-/* 0x0a */			{         0,     0, "Reserved for future use"},
-/* 0x0b */			{         0,     0, "Reserved for future use"},
-};
+#include "../ccardimx28js/board-ccardimx28.h"
 
 #define	MUX_CONFIG_SSP0	(MXS_PAD_3V3 | MXS_PAD_8MA | MXS_PAD_PULLUP)
 #define	MUX_CONFIG_GPMI	(MXS_PAD_1V8 | MXS_PAD_4MA | MXS_PAD_NOPULL)
@@ -202,36 +174,60 @@ uint32_t mxs_mem_get_size(void)
 	 * Return DRAM size of variant (default to 256MiB if invalid
 	 * variant detected on OTP bits)
 	 */
-	if (variant > ARRAY_SIZE(ccardxmx28_id) ||
-	    ccardxmx28_id[variant].sdram == 0)
+	if (variant > (ARRAY_SIZE(ccardimx28_id) - 1)||
+	    ccardimx28_id[variant].sdram == 0)
 		return 0x10000000;
 
-        return (ccardxmx28_id[variant].sdram);
+        return (ccardimx28_id[variant].sdram);
 }
 
 void mxs_adjust_memory_params(uint32_t *dram_vals)
 {
 	uint32_t dram_size = mxs_mem_get_size();
 
+	/* The present function adjust the SDRAM controller registers to match
+	 * the following DDR2 memory chips:
+	 * 	1Gbit (128MiB)
+	 *	   - Micron MT47H64M16NF-25E
+	 *	   - ISSI IS43DR16640B-25DBLI
+	 *	   - Nanya NT5TU64M16HG-ACI
+	 *	   - Winbond W971GG6KB-25I
+	 *	2Gbit (256MiB)
+	 *	   - Micron MT47H128M16RT-25E
+	 *	   - ISSI IS43DR16128B
+	 *	   - Winbond W972GG6JB-25I
+	 * The registers are configured to match the largest, safest timing
+	 * value of all the memories. Where possible, a distinction was made
+	 * between 1Gbit and 2Gbit chips, to adjust the timings for better
+	 * performance.
+	 *
+	 * NOTE: Commented lines are just for reference. They mean they contain
+	 * the default value established by the bootlets at spl_mem_init.c.
+	 */
 	if (0x8000000 == dram_size) {
-		/* 128 SDRAM (MT47H64M16-25E) */
+		/* 1Gbit (128MiB) DDR2 SDRAM */
 		dram_vals[29] = 0x0102020a;	// Enable CS0; 10 bit col addr, 13 addr pins, auto precharge=A10
+		dram_vals[38] = 0x06005303;	// tDAL=tWR+tRP=15ns+12.5ns=27.5ns/4.86ns=6, CPD=400ns/4.86ns=83 (0x53), TCKE=3
+		//dram_vals[41] = 0x0002030c;	// TPDEX=tXP=2, tRCD=12.5ns/4.86ns=3, tRC=57.5/4.86ns=12
+		dram_vals[43] = 0x031b0322;	// tRP=12.5ns/4.86ns=3, tRFC(1Gb)=127.5ns/4.86ns=27=0x1b, tREFIit=floor(3900ns/4.86ns)=802=0x322 (32ms refresh)
+		dram_vals[45] = 0x00c8001d;	// TSXR=tXSRDmin=200, TXSNR=tXSNR=tRFC+10ns=137.5ns/4.86ns=29=0x1d
 	}
 	else {
-		/* 256 SDRAM (MT47H128M16-25E, assume default) */
+		/* 2Gbit (256MiB) DDR2 SDRAM (default) */
 		dram_vals[29] = 0x0102010a;	// Enable CS0; 10 bit col addr, 14 addr pins, auto precharge=A10
+		dram_vals[38] = 0x07005303;	// tDAL=tWR+tRP=15ns+15ns=30ns/4.86ns=7, CPD=400ns/4.86ns=83 (0x53), TCKE=3
+		dram_vals[41] = 0x0002040c;	// TPDEX=tXP=2, tRCD=15ns/4.86ns=4, tRC=57.5/4.86ns=12
+		dram_vals[43] = 0x04290322;	// tRP=15ns/4.86ns=4, tRFC(2Gb)=195ns/4.86ns=41=0x29, tREFIit=floor(3900ns/4.86ns)=802=0x322 (32ms refresh)
+		dram_vals[45] = 0x00c8002b;	// TSXR=tXSRDmin=200, TXSNR=tXSNR=tRFC+10ns=205ns/4.86ns=43=0x2b
 	}
 	//dram_vals[37] = 0x07080403;	// CASLAT_LIN_GATE=7 CASLAT_LIN=8 CASLAT=4 WRLAT=3 (could potentially use: CASLAT_LIN_GATE=6, 6, 3, 2)
 
 	/* EMI freq = 205.71 MHz, cycle=4.861ns */
-	dram_vals[38] = 0x06005303;	// tDAL=tWR+tRP=15ns+12.5ns=27.5ns/4.86ns=6, CPD=400ns/4.86ns=83 (0x53), TCKE=3
-	dram_vals[39] = 0x0a0000c8;	// tFAW=45ns/4.86ns=10, DLL reset recovery (lock) time = 200 cycles
+	dram_vals[39] = 0x0b0000c8;	// tFAW=50ns/4.86ns=11, DLL reset recovery (lock) time = 200 cycles
 	dram_vals[40] = 0x0200a0c1;	// TMRD=2, TINIT=200us/4.86ns=41153=0xa0c1 - see init timing diagram (note 3)
-	//dram_vals[41] = 0x0002030c;	// TPDEX=tXP=2, tRCD=12.5ns/4.86ns=3, tRC=55/4.86ns=12
-	dram_vals[42] = 0x00384309;	// TRAS_max=floor(70000ns/4.86ns)=14403=0x3843, TRAS_min=40ns/4.86ns=9
-	dram_vals[43] = 0x03160322;	// tRP=12.5ns/4.86ns=3, tRFC(512Mb)=105ns/4.86ns=22=0x16, tREFIit=floor(3900ns/4.86ns)=802=0x322 (32ms refresh)
+	dram_vals[42] = 0x0038430a;	// TRAS_max=floor(70000ns/4.86ns)=14403=0x3843, TRAS_min=45ns/4.86ns=10
+
 	dram_vals[44] = 0x02040203;	// tWTR=7.5ns/4.86ns=2, tWR=15ns/4.86ns=4 tRTP=7.5ns/4.86ns=2 tRRD(x16)=10ns/4.86ns=3
-	dram_vals[45] = 0x00c80018;	// TSXR=tXSRDmin=200, TXSNR=tXSNR=tRFC(512Mb)+10ns=115ns/4.86ns=24
 
 	dram_vals[67] = 0x01000102;	// Enable CS0 clock only
 	dram_vals[73] = 0x00000000;
@@ -247,10 +243,17 @@ void mxs_adjust_memory_params(uint32_t *dram_vals)
 	dram_vals[93] = 0x00000000;
 	dram_vals[94] = 0x00000000;
 	dram_vals[163] = 0x00030404;
-	dram_vals[164] = 0x00000002;	// TMOD=tMRD=2 cycles
+	dram_vals[164] = 0x00000002;	// TMOD=tMRD=2 cycles -> 2 * 4.86 = 9.72ns < TMODmax(12ns)
 
-	dram_vals[177] = 0x02030101;	// TCCD=2, TRPA=tRPA(<1Gb)=12.5ns/4.86ns=3, CKSRX/CKSRE=1 (see pg 115, note 1)
-	dram_vals[181] = 0x00000442;	// MR0 settings for CS0: WR=3, CASLat=4, Sequential, BurstLength=4
+	/* TCCD=2,
+	 * TRPA=
+	 * 	Nanya: tRPA = tRP + 1tCK = 12.5 + 1 = 13.5/4.86 = 3
+	 * 	Winbond: tRPA = tnRP + 1nCK = (tRP / tCK) + 1 = (12.5 / 4.86) + 1 = 4
+	 * 	Micron: tRPA = 15 / 4.86 = 4
+	 * CKSRX/CKSRE=1 (see pg 115, note 1)
+	 */
+	dram_vals[177] = 0x02040101;
+	dram_vals[181] = 0x00000642;	// MR0 settings for CS0: WR=tWR/tCK=4, CASLat=4, Sequential, BurstLength=4
 
 	dram_vals[182] = 0x00000000;
 	dram_vals[183] = 0x00000004;	// MR1 settings for CS0: 75ohm ODT nominal, Full drive strength

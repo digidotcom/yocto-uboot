@@ -2,6 +2,12 @@
 U-Boot RELEASE NOTES
 --------------------
 
+v2013.01 - DUB-2.0.2.1, released on 2015/02/12
+        - Added support for ccardimx28js variants 0x0e..0x12
+        - Adjust DRAM timings to be compatible with different
+          DDR2 chips.
+
+
 v2013.01 - DUB-2.0.1.1, released on 2014/04/14
         - Added support for Micrel PHY KSZ8081RNA on i.MX28
           based platforms.
