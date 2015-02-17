@@ -465,17 +465,18 @@ void start_armboot (void)
 	}
 #endif
 
-#ifdef CONFIG_GENERIC_MMC
-	puts ("MMC:   ");
-	mmc_initialize (gd->bd);
-#endif
-
 	/* initialize environment */
 	env_relocate ();
 
 #if defined(CONFIG_CMD_BSP) && defined(CONFIG_PLATFORM_HAS_HWID)
 	get_module_hw_id();
 #endif
+
+#ifdef CONFIG_GENERIC_MMC
+	puts ("MMC:   ");
+	mmc_initialize (gd->bd);
+#endif
+
 	/* configure available RAM banks */
 	dram_init();
 	display_dram_config();

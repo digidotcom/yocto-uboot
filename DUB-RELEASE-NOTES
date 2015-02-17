@@ -2,6 +2,14 @@
 U-Boot RELEASE NOTES
 --------------------
 
+v2009.08 - DUB-1.6.5.1, released on 2015/02/12
+        - ccwmx51: always enable WLAN to avoid occasional uSD detection
+          issue.
+        - ccardimx28: added variant 0x12.
+	- ccardimx28: adjust DRAM timings (on bootlets) to be compatible with
+	  different DDR2 chips.
+
+
 v2009.08 - DUB-1.6.4.1, released on 2014/04/11
         - Added support for Micrel PHY KSZ8081RNA on i.MX28
 	  based platforms.

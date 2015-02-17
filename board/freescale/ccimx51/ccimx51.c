@@ -1191,6 +1191,23 @@ int board_mmc_init(bd_t *bis)
 {
 	int mmc_devs[] = MMC_DEVICES;
 	int i;
+	unsigned int val;
+
+	/* Apparently the iMX51 CPU does not correctly isolate the power
+	 * signals of the different SD interfaces. It has been empirically
+	 * confirmed a feedback voltage coming from NVCC_PER15 (uSD card) to
+	 * NVCC_PER17 (WLAN) which causes uSD card detection issues when the
+	 * WLAN is disabled by jumper J17 on the JSK. To avoid these problems
+	 * the recommendation is to have J17 open (WLAN enabled) and enabling
+	 * always the WLAN by setting WLAN_RESET_L/MC13892_GPO4 high in U-Boot
+	 * so that 3V3_WLAN always has 3.3V.
+	 * The issue does not happen in non-wireless modules
+	 */
+	if (MACH_TYPE_CCWMX51JS == variant_machid()) {
+		val = pmic_reg(pmicslv, 34, 0, 0);
+		val |= (1 << 12);
+		pmic_reg(pmicslv, 34, val, 1);
+	}
 
 	for(i=0; i < ARRAY_SIZE(mmc_devs); i++) {
 		if (!esdhc_gpio_init(mmc_devs[i]))
