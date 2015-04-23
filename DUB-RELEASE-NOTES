@@ -2,7 +2,7 @@
 U-Boot RELEASE NOTES
 --------------------
 
-v2009.08 - DUB-1.6.5.1, released on 2015/02/12
+v2009.08 - DUB-1.6.5.2, released on 2015/02/23
         - ccwmx51: always enable WLAN to avoid occasional uSD detection
           issue.
         - ccardimx28: added variant 0x12.

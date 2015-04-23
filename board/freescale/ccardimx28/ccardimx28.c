@@ -236,7 +236,7 @@ static int is_valid_hw_id(u8 variant)
 {
 	int ret = 0;
 
-	if (variant < (ARRAY_SIZE(ccardimx28_id) - 1)) {
+	if (variant < ARRAY_SIZE(ccardimx28_id)) {
 		if (ccardimx28_id[variant].sdram != 0)
 			ret = 1;
 	}
