@@ -115,10 +115,10 @@ struct addrvalue {
 
 #define NUM_VARIANTS	11
 
-/* DDR3 calibration values for the different CC6 variants @528MHz */
+/* DDR3 calibration values for the different CC6 variants */
 struct addrvalue ddr3_calibration[NUM_VARIANTS + 1][12] = {
 	/* Variant 0x02 */
-	[2] = {
+	[0x02] = {
 		/* Write leveling */
 		{MX6_MMDC_P0_MPWLDECTRL0, 0x00070012},
 		{MX6_MMDC_P0_MPWLDECTRL1, 0x002C0020},
@@ -137,7 +137,7 @@ struct addrvalue ddr3_calibration[NUM_VARIANTS + 1][12] = {
 		{MX6_MMDC_P1_MPWRDLCTL, 0x4430453D},
 	},
 	/* Variant 0x03 */
-	[3] = {
+	[0x03] = {
 		/* Write leveling */
 		{MX6_MMDC_P0_MPWLDECTRL0, 0x000C0019},
 		{MX6_MMDC_P0_MPWLDECTRL1, 0x00310024},
@@ -156,7 +156,7 @@ struct addrvalue ddr3_calibration[NUM_VARIANTS + 1][12] = {
 		{0, 0},
 	},
 	/* Variant 0x04 */
-	[4] = {
+	[0x04] = {
 		/* Write leveling */
 		{MX6_MMDC_P0_MPWLDECTRL0, 0x000B0018},
 		{MX6_MMDC_P0_MPWLDECTRL1, 0x00320023},
@@ -173,6 +173,101 @@ struct addrvalue ddr3_calibration[NUM_VARIANTS + 1][12] = {
 		/* Write delay */
 		{MX6_MMDC_P0_MPWRDLCTL, 0x3B3A433D},
 		{MX6_MMDC_P1_MPWRDLCTL, 0x4633483E},
+	},
+	/* Variant 0x05 */
+	[0x05] = {
+		/* Write leveling */
+		{MX6_MMDC_P0_MPWLDECTRL0, 0x00080014},
+		{MX6_MMDC_P0_MPWLDECTRL1, 0x00300022},
+		{MX6_MMDC_P1_MPWLDECTRL0, 0x00200035},
+		{MX6_MMDC_P1_MPWLDECTRL1, 0x00300032},
+		/* Read DQS gating */
+		{MX6_MMDC_P0_MPDGCTRL0, 0x432F0332},
+		{MX6_MMDC_P0_MPDGCTRL1, 0x03250328},
+		{MX6_MMDC_P1_MPDGCTRL0, 0x433D0345},
+		{MX6_MMDC_P1_MPDGCTRL1, 0x0339031C},
+		/* Read delay */
+		{MX6_MMDC_P0_MPRDDLCTL, 0x3B303438},
+		{MX6_MMDC_P1_MPRDDLCTL, 0x32342D3C},
+		/* Write delay */
+		{MX6_MMDC_P0_MPWRDLCTL, 0x3938433C},
+		{MX6_MMDC_P1_MPWRDLCTL, 0x4433463D},
+	},
+	/* Variant 0x06 (same as 0x08) */
+	[0x06] = {
+		/* Write leveling */
+		{MX6_MMDC_P0_MPWLDECTRL0, 0x000A0015},
+		{MX6_MMDC_P0_MPWLDECTRL1, 0x002E0020},
+		{0, 0},
+		{0, 0},
+		/* Read DQS gating */
+		{MX6_MMDC_P0_MPDGCTRL0, 0x43360337},
+		{MX6_MMDC_P0_MPDGCTRL1, 0x0329032B},
+		{0, 0},
+		{0, 0},
+		/* Read delay */
+		{MX6_MMDC_P0_MPRDDLCTL, 0x39303338},
+		{0, 0},
+		/* Write delay */
+		{MX6_MMDC_P0_MPWRDLCTL, 0x37373F3A},
+		{0, 0},
+	},
+	/* Variant 0x08 (same as 0x06) */
+	[0x08] = {
+		/* Write leveling */
+		{MX6_MMDC_P0_MPWLDECTRL0, 0x000A0015},
+		{MX6_MMDC_P0_MPWLDECTRL1, 0x002E0020},
+		{0, 0},
+		{0, 0},
+		/* Read DQS gating */
+		{MX6_MMDC_P0_MPDGCTRL0, 0x43360337},
+		{MX6_MMDC_P0_MPDGCTRL1, 0x0329032B},
+		{0, 0},
+		{0, 0},
+		/* Read delay */
+		{MX6_MMDC_P0_MPRDDLCTL, 0x39303338},
+		{0, 0},
+		/* Write delay */
+		{MX6_MMDC_P0_MPWRDLCTL, 0x37373F3A},
+		{0, 0},
+	},
+	/* Variant 0x0A */
+	[0x0A] = {
+		/* Write leveling */
+		{MX6_MMDC_P0_MPWLDECTRL0, 0x00270036},
+		{MX6_MMDC_P0_MPWLDECTRL1, 0x00310033},
+		{0, 0},
+		{0, 0},
+		/* Read DQS gating */
+		{MX6_MMDC_P0_MPDGCTRL0, 0x42520243},
+		{MX6_MMDC_P0_MPDGCTRL1, 0x0236023F},
+		{0, 0},
+		{0, 0},
+		/* Read delay */
+		{MX6_MMDC_P0_MPRDDLCTL, 0x45474B4A},
+		{0, 0},
+		/* Write delay */
+		{MX6_MMDC_P0_MPWRDLCTL, 0x28282326},
+		{0, 0},
+	},
+	/* Variant 0x0B */
+	[0x0B] = {
+		/* Write leveling */
+		{MX6_MMDC_P0_MPWLDECTRL0, 0x002C0038},
+		{MX6_MMDC_P0_MPWLDECTRL1, 0x00360038},
+		{MX6_MMDC_P1_MPWLDECTRL0, 0x001B001F},
+		{MX6_MMDC_P1_MPWLDECTRL1, 0x002B0034},
+		/* Read DQS gating */
+		{MX6_MMDC_P0_MPDGCTRL0, 0x423F0235},
+		{MX6_MMDC_P0_MPDGCTRL1, 0x02360241},
+		{MX6_MMDC_P1_MPDGCTRL0, 0x42340236},
+		{MX6_MMDC_P1_MPDGCTRL1, 0x02250238},
+		/* Read delay */
+		{MX6_MMDC_P0_MPRDDLCTL, 0x41454848},
+		{MX6_MMDC_P1_MPRDDLCTL, 0x45464B43},
+		/* Write delay */
+		{MX6_MMDC_P0_MPWRDLCTL, 0x36352D31},
+		{MX6_MMDC_P1_MPWRDLCTL, 0x3130332D},
 	},
 };
 
@@ -580,20 +675,6 @@ int ccimx6_late_init(void)
 		}
 	}
 #endif
-
-	/* TODO: move dynamic variable generation to a common place */
-	/* If undefined, calculate 'verifyaddr' as halfway through the RAM
-	 * from $loadaddr.
-	 */
-	if (NULL == getenv("verifyaddr")) {
-		u32 verifyaddr = CONFIG_LOADADDR +
-			((gd->ram_size - (CONFIG_LOADADDR - PHYS_SDRAM)) / 2);
-		u32 loadaddr = simple_strtol(getenv("loadaddr"), NULL, 16);
-
-		if (verifyaddr > loadaddr &&
-		    verifyaddr < (PHYS_SDRAM + gd->ram_size))
-			setenv_hex("verifyaddr", verifyaddr);
-	}
 
 	return 0;
 }

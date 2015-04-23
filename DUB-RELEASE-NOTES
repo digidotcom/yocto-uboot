@@ -2,6 +2,18 @@
 Digi U-Boot RELEASE NOTES
 -------------------------
 
+v2013.04 - DUB-2.3.3.2, released on 2015/03/26
+	- Added DDR3 calibration data for variants:
+		0x05: Consumer dual-core 1GHz, 4GB eMMC, 1GB DDR3, 0/+70C
+		0x06: Consumer dual-core 1GHz, 4GB eMMC, 512MB DDR3, 0/+70C
+		0x08: Consumer dual-core 1GHz, 4GB eMMC, 512MB DDR3,
+		      non-wireless, 0/+70C
+		0x0A: Industrial DualLite-core 800MHz, 4GB eMMC, 512MB DDR3,
+		      -40/+85C
+		0x0B: Consumer DualLite-core 1GHz, 4GB eMMC, 1GB DDR3, 0/+70C
+	- Fixed dcache problem on MMC driver.
+
+
 v2013.04 - DUB-2.3.2.1, released on 2015/02/04
 	- Added DDR3 calibration data for variants:
 		0x03: Industrial quad 800MHz, 4GB eMMC, 512MB DDR3, -40/+85C
