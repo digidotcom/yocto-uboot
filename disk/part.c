@@ -639,28 +639,32 @@ cleanup:
 	return ret;
 }
 
-int get_partition_byname(const char *ifname, const char *dev_str,
-			 char *part_name, disk_partition_t *info)
+int get_partition_bynameorindex(const char *ifname, const char *dev_str,
+				char *part_nameorindex, disk_partition_t *info)
 {
 	int dev;
-	int part = 1;
+	unsigned long part;
 	block_dev_desc_t *dev_desc;
-	int ret;
 
 	dev = get_device(ifname, dev_str, &dev_desc);
 	if (dev < 0)
 		return -1;
 
-	do {
-		ret = get_partition_info(dev_desc, part, info);
-		if (!ret) {
+	/* Check if partition to update is given as a number */
+	if (!strict_strtoul(part_nameorindex, 16, &part)) {
+		/* Look up partition by number */
+		 if (!get_partition_info(dev_desc, part, info))
+			 return (int)part;
+	} else {
+		/* Look up partition by name */
+		part = 1;
+		while (!get_partition_info(dev_desc, part, info)) {
 			/* Check if partition name matches */
-			if (!strcmp((char *)info->name, part_name))
-				return part;
+			if (!strcmp((char *)info->name, part_nameorindex))
+				return (int)part;
+			part++;
 		}
-		part++;
-	} while(ret == 0);
+	}
 
-	info = NULL;
 	return -1;
 }

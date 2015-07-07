@@ -22,12 +22,15 @@
 #include <asm/arch/iomux.h>
 #include <asm/arch/mx6-pins.h>
 #include <asm/gpio.h>
+#include <fsl_esdhc.h>
+#include <mmc.h>
 #include <netdev.h>
 #if CONFIG_I2C_MXC
 #include <i2c.h>
 #include <asm/imx-common/mxc_i2c.h>
 #endif
 #include "../ccimx6/ccimx6.h"
+#include "../common/hwid.h"
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -160,7 +163,7 @@ int board_eth_init(bd_t *bis)
 static void setup_board_audio(void)
 {
 	/* SBC version 2 uses a GPIO to power enable the audio codec */
-	if (get_carrier_board_version() >= 2) {
+	if (get_carrierboard_version() >= 2) {
 		int pwren_gpio = IMX_GPIO_NR(2, 25);
 
 		/* Power enable line IOMUX */
@@ -174,9 +177,28 @@ static void setup_board_audio(void)
 	}
 }
 
+int board_mmc_getcd(struct mmc *mmc)
+{
+	struct fsl_esdhc_cfg *cfg = (struct fsl_esdhc_cfg *)mmc->priv;
+	int ret = 0;
+
+	switch (cfg->esdhc_base) {
+	case USDHC2_BASE_ADDR:
+		ret = 1; /* uSD/uSDHC2 does not connect CD. Assume present */
+		break;
+	case USDHC4_BASE_ADDR:
+		if (board_has_emmc())
+			ret = 1;
+		break;
+	}
+
+	return ret;
+}
+
 int board_early_init_f(void)
 {
 	setup_iomux_uart();
+	ccimx6_early_init();
 
 #ifdef CONFIG_CMD_SATA
 	setup_sata();
@@ -190,6 +212,9 @@ int board_init(void)
 {
 	/* address of boot parameters */
 	gd->bd->bi_boot_params = PHYS_SDRAM + 0x100;
+
+	/* Re-read global HWID variable after relocation */
+	get_hwid();
 
 	return 0;
 }

@@ -479,7 +479,10 @@ const char * boot_mode_string(void)
 	unsigned reg;
 	int i;
 
-	reg = readl(&psrc->sbmr1);
+	if (readl(&psrc->gpr10) & (1 << 28))
+		reg = readl(&psrc->gpr9);
+	else
+		reg = readl(&psrc->sbmr1);
 	for (i = 0; boot_device_sel[i].name != NULL; i++) {
 		if ((reg & boot_device_sel[i].mask) == boot_device_sel[i].val)
 			return boot_device_sel[i].name;

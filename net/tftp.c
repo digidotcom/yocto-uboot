@@ -1053,6 +1053,10 @@ void TftpStart(enum proto_t protocol)
 				       "| the partition partially written, and may result |\n"
 				       "| in an non-booting operating system.             |\n"
 				       "+-------------------------------------------------+\n\t");
+				/* Initialize/reset OTF variables */
+				otfd.loadaddr = load_addr;
+				otfd.flags = OTF_FLAG_INIT;
+				otfd.offset = 0;
 			} else {
 				puts("Loading: *\b");
 			}

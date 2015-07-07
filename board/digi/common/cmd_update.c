@@ -8,12 +8,17 @@
 */
 
 #include <common.h>
+#include <asm/imx-common/boot_mode.h>
 #include <otf_update.h>
 #include <part.h>
 #include "helper.h"
 
 DECLARE_GLOBAL_DATA_PTR;
 
+static block_dev_desc_t *mmc_dev;
+static int mmc_dev_index;
+
+extern int mmc_get_bootdevindex(void);
 extern int board_update_chunk(otf_data_t *oftd);
 extern void register_tftp_otf_update_hook(int (*hook)(otf_data_t *oftd),
 					  disk_partition_t*);
@@ -71,13 +76,6 @@ static int write_firmware(char *partname, unsigned long loadaddr,
 {
 	char cmd[CONFIG_SYS_CBSIZE] = "";
 	unsigned long size_blks, verifyaddr, u, m;
-	block_dev_desc_t *mmc_dev;
-
-	mmc_dev = mmc_get_dev(CONFIG_SYS_STORAGE_DEV);
-	if (NULL == mmc_dev) {
-		debug("Cannot determine sys storage device\n");
-		return -1;
-	}
 
 	size_blks = (filesize / mmc_dev->blksz) + (filesize % mmc_dev->blksz != 0);
 
@@ -89,14 +87,16 @@ static int write_firmware(char *partname, unsigned long loadaddr,
 	}
 
 	/* Prepare command to change to storage device */
-	sprintf(cmd, "%s dev %d", CONFIG_SYS_STORAGE_MEDIA,
-		CONFIG_SYS_STORAGE_DEV);
+	sprintf(cmd, "%s dev %d", CONFIG_SYS_STORAGE_MEDIA, mmc_dev_index);
 
-#ifdef CONFIG_SYS_BOOT_PART
-	/* If U-Boot and special partition, append the hardware partition */
-	if (!strcmp(partname, "uboot"))
+	/*
+	 * If updating U-Boot on eMMC
+	 * append the hardware partition where U-Boot lives.
+	 */
+	if (!strcmp(partname, "uboot") &&
+	    !strcmp(CONFIG_SYS_STORAGE_MEDIA, "mmc") &&
+	    board_has_emmc() && (mmc_dev_index == 0))
 		strcat(cmd, " $mmcbootpart");
-#endif
 
 	/* Change to storage device */
 	if (run_command(cmd, 0)) {
@@ -176,8 +176,7 @@ static int write_file(char *targetfilename, char *targetfs, int part)
 	filesize = getenv_ulong("filesize", 16, 0);
 
 	/* Change to storage device */
-	sprintf(cmd, "%s dev %d", CONFIG_SYS_STORAGE_MEDIA,
-		CONFIG_SYS_STORAGE_DEV);
+	sprintf(cmd, "%s dev %d", CONFIG_SYS_STORAGE_MEDIA, mmc_dev_index);
 	if (run_command(cmd, 0)) {
 		debug("Cannot change to storage device\n");
 		return -1;
@@ -185,7 +184,7 @@ static int write_file(char *targetfilename, char *targetfs, int part)
 
 	/* Prepare write command */
 	sprintf(cmd, "%swrite %s %d:%d %lx %s %lx", targetfs,
-		CONFIG_SYS_STORAGE_MEDIA, CONFIG_SYS_STORAGE_DEV, part,
+		CONFIG_SYS_STORAGE_MEDIA, mmc_dev_index, part,
 		loadaddr, targetfilename, filesize);
 
 	return run_command(cmd, 0);
@@ -198,9 +197,10 @@ static int write_file(char *targetfilename, char *targetfs, int part)
 static int emmc_bootselect(void)
 {
 	char cmd[CONFIG_SYS_CBSIZE] = "";
+	int bootpart;
 
 	/* Prepare command to change to storage device */
-	sprintf(cmd, "mmc dev %d", CONFIG_SYS_STORAGE_DEV);
+	sprintf(cmd, "mmc dev %d", mmc_dev_index);
 
 	/* Change to storage device */
 	if (run_command(cmd, 0)) {
@@ -209,8 +209,9 @@ static int emmc_bootselect(void)
 	}
 
 	/* Select boot partition and enable boot acknowledge */
+	bootpart = getenv_ulong("mmcbootpart", 16, CONFIG_SYS_BOOT_PART_EMMC);
 	sprintf(cmd, "mmc ecsd write %x %x", ECSD_PARTITION_CONFIG,
-		BOOT_ACK | (CONFIG_SYS_BOOT_PART << BOOT_PARTITION_ENABLE_OFF));
+		BOOT_ACK | (bootpart << BOOT_PARTITION_ENABLE_OFF));
 
 	return run_command(cmd, 0);
 }
@@ -233,6 +234,19 @@ static unsigned int get_available_ram_for_update(void)
 	return (gd->bd->bi_dram[0].size - CONFIG_UBOOT_RESERVED - la_off);
 }
 
+static int init_mmc_globals(void)
+{
+	/* Use the device in $mmcdev or else, the boot media */
+	mmc_dev_index = getenv_ulong("mmcdev", 16, mmc_get_bootdevindex());
+	mmc_dev = mmc_get_dev(mmc_dev_index);
+	if (NULL == mmc_dev) {
+		debug("Cannot determine sys storage device\n");
+		return -1;
+	}
+
+	return 0;
+}
+
 static int do_update(cmd_tbl_t* cmdtp, int flag, int argc, char * const argv[])
 {
 	int src = SRC_TFTP;	/* default to TFTP */
@@ -251,11 +265,26 @@ static int do_update(cmd_tbl_t* cmdtp, int flag, int argc, char * const argv[])
 	if (argc < 2)
 		return CMD_RET_USAGE;
 
-	/* Get data of partition to be updated */
-	ret = get_target_partition(argv[1], &info);
-	if (ret) {
-		printf("Error: partition '%s' not found\n", argv[1]);
+	if (init_mmc_globals())
 		return CMD_RET_FAILURE;
+
+	/* Get data of partition to be updated */
+	if (!strcmp(argv[1], "uboot")) {
+		/* Simulate partition data for U-Boot */
+		info.start = CONFIG_SYS_BOOT_PART_OFFSET / mmc_dev->blksz;
+		info.size = CONFIG_SYS_BOOT_PART_SIZE / mmc_dev->blksz;
+		strcpy((char *)info.name, argv[1]);
+	} else {
+		/* Not a reserved name. Must be a partition name or index */
+		char dev_index_str[2];
+
+		/* Look up partition on the device */
+		sprintf(dev_index_str, "%d", mmc_dev_index);
+		if (get_partition_bynameorindex(CONFIG_SYS_STORAGE_MEDIA,
+					dev_index_str, argv[1], &info) < 0) {
+			printf("Error: partition '%s' not found\n", argv[1]);
+			return CMD_RET_FAILURE;
+		}
 	}
 
 	/* Ask for confirmation if needed */
@@ -310,9 +339,7 @@ static int do_update(cmd_tbl_t* cmdtp, int flag, int argc, char * const argv[])
 			 * the destiny partition.
 			 */
 			unsigned long avail = get_available_ram_for_update();
-			block_dev_desc_t *mmc_dev;
 
-			mmc_dev = mmc_get_dev(CONFIG_SYS_STORAGE_DEV);
 			if (avail <= info.size * mmc_dev->blksz) {
 				printf("Partition to update is larger (%d MiB) than the\n"
 				       "available RAM memory (%d MiB, starting at $loadaddr=0x%08x).\n",
@@ -350,8 +377,7 @@ static int do_update(cmd_tbl_t* cmdtp, int flag, int argc, char * const argv[])
 
 	if (otf) {
 		/* Prepare command to change to storage device */
-		sprintf(cmd, CONFIG_SYS_STORAGE_MEDIA " dev %d",
-			CONFIG_SYS_STORAGE_DEV);
+		sprintf(cmd, CONFIG_SYS_STORAGE_MEDIA " dev %d", mmc_dev_index);
 		/* Change to storage device */
 		if (run_command(cmd, 0)) {
 			printf("Error: cannot change to storage device\n");
@@ -387,11 +413,14 @@ static int do_update(cmd_tbl_t* cmdtp, int flag, int argc, char * const argv[])
 		ret = CMD_RET_FAILURE;
 		goto _ret;
 	}
-#ifdef CONFIG_SYS_BOOT_PART
-	/* If U-Boot and special partition, instruct the eMMC
-	 * to boot from it */
+
+	/*
+	 * If updating U-Boot into eMMC, instruct the eMMC to boot from
+	 * special hardware partition.
+	 */
 	if (!strcmp(argv[1], "uboot") &&
-	    !strcmp(CONFIG_SYS_STORAGE_MEDIA, "mmc")) {
+	    !strcmp(CONFIG_SYS_STORAGE_MEDIA, "mmc") &&
+	    board_has_emmc() && (mmc_dev_index == 0)) {
 		ret = emmc_bootselect();
 		if (ret) {
 			printf("Error changing eMMC boot partition\n");
@@ -399,7 +428,6 @@ static int do_update(cmd_tbl_t* cmdtp, int flag, int argc, char * const argv[])
 			goto _ret;
 		}
 	}
-#endif
 
 _ret:
 	unregister_otf_hook(src);
@@ -410,10 +438,10 @@ U_BOOT_CMD(
 	update,	6,	0,	do_update,
 	"Digi modules update command",
 	"<partition>  [source] [extra-args...]\n"
-	" Description: updates (raw writes) eMMC <partition> via <source>\n"
+	" Description: updates (raw writes) <partition> in $mmcdev via <source>\n"
 	" Arguments:\n"
-	"   - partition:    a GUID partition name or one of the reserved names: \n"
-	"                   uboot\n"
+	"   - partition:    a partition index, a GUID partition name, or one\n"
+	"                   of the reserved names: uboot\n"
 	"   - [source]:     " CONFIG_UPDATE_SUPPORTED_SOURCES_LIST "\n"
 	"   - [extra-args]: extra arguments depending on 'source'\n"
 	"\n"
@@ -474,14 +502,18 @@ static int do_updatefile(cmd_tbl_t* cmdtp, int flag, int argc,
 		"ext4",
 #endif
 	};
+	char dev_index_str[2];
 
 	if (argc < 2)
 		return CMD_RET_USAGE;
 
+	if (init_mmc_globals())
+		return CMD_RET_FAILURE;
+
 	/* Get data of partition to be updated */
-	part = get_partition_byname(CONFIG_SYS_STORAGE_MEDIA,
-				    __stringify(CONFIG_SYS_STORAGE_DEV),
-				    argv[1], &info);
+	sprintf(dev_index_str, "%d", mmc_dev_index);
+	part = get_partition_bynameorindex(CONFIG_SYS_STORAGE_MEDIA,
+					   dev_index_str, argv[1], &info);
 	if (part < 0) {
 		printf("Error: partition '%s' not found\n", argv[1]);
 		return CMD_RET_FAILURE;
@@ -550,9 +582,11 @@ U_BOOT_CMD(
 	updatefile,	8,	0,	do_updatefile,
 	"Digi modules updatefile command",
 	"<partition>  [source] [extra-args...]\n"
-	" Description: updates/writes a file in <partition> via <source>\n"
+	" Description: updates/writes a file in <partition> in $mmcdev via\n"
+	"              <source>\n"
 	" Arguments:\n"
-	"   - partition:    a GUID partition name where to upload the file\n"
+	"   - partition:    a partition index or a GUID partition name where\n"
+	"                   to upload the file\n"
 	"   - [source]:     " CONFIG_UPDATE_SUPPORTED_SOURCES_LIST "\n"
 	"   - [extra-args]: extra arguments depending on 'source'\n"
 	"\n"

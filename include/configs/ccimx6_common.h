@@ -92,10 +92,12 @@
 #define CONFIG_ENV_FLAGS_LIST_STATIC	\
 	"wlanaddr:mc,"			\
 	"btaddr:mc,"			\
-	"bootargs_once:sr"
+	"bootargs_once:sr,"		\
+	"mmcbootdev:so"
 
 #define CONFIG_CONS_INDEX              1
 #define CONFIG_BAUDRATE                        115200
+#define CONFIG_SILENT_CONSOLE_UPDATE_ON_RELOC
 
 /* Command definition */
 #include <config_cmd_default.h>
@@ -110,13 +112,11 @@
 #define CONFIG_MXC_OCOTP
 #endif
 #define CONFIG_HAS_HWID
-#ifdef CONFIG_HAS_HWID
 #define CONFIG_HWID_BANK		4
 #define CONFIG_HWID_START_WORD		2
 #define CONFIG_HWID_WORDS_NUMBER	2
 #define CONFIG_HWID_LOCK_FUSE		(1 << 8)
 #define CONFIG_MANUF_STRINGS_HELP	"<LYYWWGGXXXXXX> <VVHC>"
-#endif /* CONFIG_HAS_HWID */
 
 #define CONFIG_CMD_UPDATE
 /* On the fly update chunk (must be a multiple of mmc block size) */
@@ -174,43 +174,12 @@
 	"setexpr filesizeblks ${filesize} / 200; " \
 	"setexpr filesizeblks ${filesizeblks} + 1; "
 
-#if defined(CONFIG_SYS_BOOT_NAND)
-	/*
-	 * The partions' layout for NAND is:
-	 *     mtd0: 16M      (uboot)
-	 *     mtd1: 16M      (kernel)
-	 *     mtd2: 16M      (dtb)
-	 *     mtd3: left     (rootfs)
-	 */
-#define CONFIG_EXTRA_ENV_SETTINGS \
-	"fdt_addr=0x18000000\0" \
-	"fdt_high=0xffffffff\0"	  \
-	"bootargs=console=" CONFIG_CONSOLE_DEV ",115200 ubi.mtd=3 "  \
-		"root=ubi0:rootfs rootfstype=ubifs "		     \
-		"mtdparts=gpmi-nand:16m(boot),16m(kernel),16m(dtb),-(rootfs)\0"\
-	"bootcmd=nand read ${loadaddr} 0x1000000 0x800000;"\
-		"nand read ${fdt_addr} 0x2000000 0x100000;"\
-		"bootm ${loadaddr} - ${fdt_addr}\0"
 
-#elif defined(CONFIG_SYS_BOOT_SATA)
-
-#define CONFIG_EXTRA_ENV_SETTINGS \
-	"fdt_addr=0x18000000\0" \
-	"fdt_high=0xffffffff\0"   \
-	"bootargs=console=" CONFIG_CONSOLE_DEV ",115200 \0"\
-	"bootargs_sata=setenv bootargs ${bootargs} " \
-		"root=/dev/sda1 rootwait rw \0" \
-	"bootcmd_sata=run bootargs_sata; sata init; " \
-		"sata read ${loadaddr} 0x800  0x4000; " \
-		"sata read ${fdt_addr} 0x8000 0x800; " \
-		"bootm ${loadaddr} - ${fdt_addr} \0" \
-	"bootcmd=run bootcmd_sata \0"
-#else
 #define CONFIG_EXTRA_ENV_SETTINGS \
 	CONFIG_DEFAULT_NETWORK_SETTINGS \
 	RANDOM_UUIDS \
 	"script=boot.scr\0" \
-	"loadscript=fatload mmc ${mmcdev}:${mmcpart} ${loadaddr} ${script}\0" \
+	"loadscript=fatload mmc ${mmcbootdev}:${mmcpart} ${loadaddr} ${script}\0" \
 	"uimage=uImage-" CONFIG_SYS_BOARD ".bin\0" \
 	"fdt_file=" CONFIG_DEFAULT_FDT_FILE "\0" \
 	"fdt_addr=0x18000000\0" \
@@ -222,56 +191,14 @@
 	"console=" CONFIG_CONSOLE_DEV "\0" \
 	"fdt_high=0xffffffff\0"	  \
 	"initrd_high=0xffffffff\0" \
-	"mmcbootpart=" __stringify(CONFIG_SYS_BOOT_PART) "\0" \
+	"mmcbootpart=" __stringify(CONFIG_SYS_BOOT_PART_EMMC) "\0" \
+	"mmcdev=0\0" \
 	"mmcpart=1\0" \
 	"mmcargs=setenv bootargs console=${console},${baudrate} ${smp} " \
 		"root=/dev/mmcblk0p2 rootwait rw\0" \
 	"loaduimage=fatload mmc ${mmcdev}:${mmcpart} ${loadaddr} ${uimage}\0" \
 	"loadinitrd=fatload mmc ${mmcdev}:${mmcpart} ${initrd_addr} ${initrd_file}\0" \
 	"loadfdt=fatload mmc ${mmcdev}:${mmcpart} ${fdt_addr} ${fdt_file}\0" \
-	"mmcboot=echo Booting from mmc ...; " \
-		"run mmcargs; " \
-		"if run loaduimage; then " \
-			"if test ${boot_fdt} = yes || test ${boot_fdt} = try; then " \
-				"if run loadfdt; then " \
-					"bootm ${loadaddr} - ${fdt_addr}; " \
-				"else " \
-					"if test ${boot_fdt} = try; then " \
-						"bootm; " \
-					"else " \
-						"echo WARN: Cannot load the DT; " \
-					"fi; " \
-				"fi; " \
-			"else " \
-				"bootm; " \
-			"fi;" \
-		"else " \
-			"echo ERR: Cannot load the kernel; " \
-		"fi;\0" \
-	"netargs=setenv bootargs console=${console},${baudrate} " \
-		"root=/dev/nfs " \
-		"ip=dhcp nfsroot=${serverip}:${rootpath},v3,tcp \0" \
-	"netboot=echo Booting from net ...; " \
-		"run netargs; " \
-		"if test ${ip_dyn} = yes; then " \
-			"setenv get_cmd dhcp; " \
-		"else " \
-			"setenv get_cmd tftp; " \
-		"fi; " \
-		"${get_cmd} ${uimage}; " \
-		"if test ${boot_fdt} = yes || test ${boot_fdt} = try; then " \
-			"if ${get_cmd} ${fdt_addr} ${fdt_file}; then " \
-				"bootm ${loadaddr} - ${fdt_addr}; " \
-			"else " \
-				"if test ${boot_fdt} = try; then " \
-					"bootm; " \
-				"else " \
-					"echo WARN: Cannot load the DT; " \
-				"fi; " \
-			"fi; " \
-		"else " \
-			"bootm; " \
-		"fi;\0" \
 	"uboot_file=u-boot-" CONFIG_SYS_BOARD ".imx\0" \
 	"parts_android=\"uuid_disk=${uuid_disk};" \
 		"start=2MiB," \
@@ -304,11 +231,20 @@
 		"${video_args} " \
 		"ethaddr=${ethaddr} wlanaddr=${wlanaddr} btaddr=${btaddr} " \
 		"${bootargs_once} ${extra_bootargs}\0" \
-	"bootargs_tftp_android=setenv bootargs console=${console},${baudrate} " \
+	"bootargs_tftp=" \
+		"if test ${ip_dyn} = yes; then " \
+			"bootargs_ip=\"ip=dhcp\";" \
+		"else " \
+			"bootargs_ip=\"ip=\\${ipaddr}:\\${serverip}:" \
+			"\\${gatewayip}:\\${netmask}:\\${hostname}:" \
+			"eth0:off\";" \
+		"fi;\0" \
+	"bootargs_tftp_android=run bootargs_tftp;" \
+		"setenv bootargs console=${console},${baudrate} " \
 		"${bootargs_android} root=/dev/nfs " \
 		"androidboot.console=${console} " \
 		"${video_args} " \
-		"ip=dhcp nfsroot=${serverip}:${rootpath},v3,tcp " \
+		"${bootargs_ip} nfsroot=${serverip}:${rootpath},v3,tcp " \
 		"ethaddr=${ethaddr} wlanaddr=${wlanaddr} btaddr=${btaddr} " \
 		"${bootargs_once} ${extra_bootargs}\0" \
 	"bootargs_nfs_android=run bootargs_tftp_android\0" \
@@ -316,9 +252,10 @@
 	"bootargs_mmc_linux=setenv bootargs console=${console},${baudrate} " \
 		"${bootargs_linux} root=${mmcroot} rootwait rw " \
 		"${bootargs_once} ${extra_bootargs}\0" \
-	"bootargs_tftp_linux=setenv bootargs console=${console},${baudrate} " \
+	"bootargs_tftp_linux=run bootargs_tftp;" \
+		"setenv bootargs console=${console},${baudrate} " \
 		"${bootargs_linux} root=/dev/nfs " \
-		"ip=dhcp nfsroot=${serverip}:${rootpath},v3,tcp " \
+		"${bootargs_ip} nfsroot=${serverip}:${rootpath},v3,tcp " \
 		"${bootargs_once} ${extra_bootargs}\0" \
 	"bootargs_nfs_linux=run bootargs_tftp_linux\0" \
 	"parts_linux=\"uuid_disk=${uuid_disk};" \
@@ -351,7 +288,7 @@
 	"else " \
 		"dboot android mmc ${mmcdev}:${mmcpart}; " \
 	"fi;"
-#endif
+
 #define CONFIG_ARP_TIMEOUT     200UL
 
 /* Miscellaneous configurable options */

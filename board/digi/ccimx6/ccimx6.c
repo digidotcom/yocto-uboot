@@ -43,9 +43,7 @@
 #ifdef CONFIG_OF_LIBFDT
 #include <fdt_support.h>
 #endif
-#ifdef CONFIG_HAS_HWID
 #include "../common/hwid.h"
-#endif
 #include "ccimx6.h"
 #include "../../../drivers/net/fec_mxc.h"
 
@@ -54,6 +52,7 @@ DECLARE_GLOBAL_DATA_PTR;
 struct ccimx6_hwid my_hwid;
 static u32 hwid[CONFIG_HWID_WORDS_NUMBER];
 static block_dev_desc_t *mmc_dev;
+static int mmc_dev_index = -1;
 static int enet_xcv_type;
 
 #define UART_PAD_CTRL  (PAD_CTL_PKE | PAD_CTL_PUE |            \
@@ -113,7 +112,144 @@ struct addrvalue {
 	u32 value;
 };
 
-#define NUM_VARIANTS	11
+/**
+ * To add new valid variant ID, append new lines in this array with its configuration
+ */
+struct ccimx6_variant ccimx6_variants[] = {
+/* 0x00 */ { IMX6_NONE,	0, 0, "Unknown"},
+/* 0x01 - 55001818-01 */
+	{
+		IMX6Q,
+		MEM_1GB,
+		CCIMX6_HAS_WIRELESS | CCIMX6_HAS_BLUETOOTH |
+		CCIMX6_HAS_KINETIS | CCIMX6_HAS_EMMC,
+		"Consumer quad-core 1.2GHz, 4GB eMMC, 1GB DDR3, 0/+70C, Wireless, Bluetooth, Kinetis",
+	},
+/* 0x02 - 55001818-02 */
+	{
+		IMX6Q,
+		MEM_1GB,
+		CCIMX6_HAS_WIRELESS | CCIMX6_HAS_BLUETOOTH |
+		CCIMX6_HAS_KINETIS | CCIMX6_HAS_EMMC,
+		"Consumer quad-core 1.2GHz, 4GB eMMC, 1GB DDR3, -20/+85C, Wireless, Bluetooth, Kinetis",
+	},
+/* 0x03 - 55001818-03 */
+	{
+		IMX6Q,
+		MEM_512MB,
+		CCIMX6_HAS_WIRELESS | CCIMX6_HAS_BLUETOOTH | CCIMX6_HAS_EMMC,
+		"Industrial quad-core 800MHz, 4GB eMMC, 512MB DDR3, -40/+85C, Wireless, Bluetooth",
+	},
+/* 0x04 - 55001818-04 */
+	{
+		IMX6D,
+		MEM_1GB,
+		CCIMX6_HAS_WIRELESS | CCIMX6_HAS_BLUETOOTH | CCIMX6_HAS_EMMC,
+		"Industrial dual-core 800MHz, 4GB eMMC, 1GB DDR3, -40/+85C, Wireless, Bluetooth",
+	},
+/* 0x05 - 55001818-05 */
+	{
+		IMX6D,
+		MEM_1GB,
+		CCIMX6_HAS_WIRELESS | CCIMX6_HAS_EMMC,
+		"Consumer dual-core 1GHz, 4GB eMMC, 1GB DDR3, 0/+70C, Wireless",
+	},
+/* 0x06 - 55001818-06 */
+	{
+		IMX6D,
+		MEM_1GB,
+		CCIMX6_HAS_WIRELESS | CCIMX6_HAS_BLUETOOTH | CCIMX6_HAS_EMMC,
+		"Consumer dual-core 1GHz, 4GB eMMC, 512MB DDR3, 0/+70C, Wireless, Bluetooth",
+	},
+/* 0x07 - 55001818-07 */
+	{
+		IMX6S,
+		MEM_256MB,
+		CCIMX6_HAS_WIRELESS,
+		"Consumer mono-core 1GHz, no eMMC, 256MB DDR3, 0/+70C, Wireless",
+	},
+/* 0x08 - 55001818-08 */
+	{
+		IMX6D,
+		MEM_512MB,
+		CCIMX6_HAS_EMMC,
+		"Consumer dual-core 1GHz, 4GB eMMC, 512MB DDR3, 0/+70C",
+	},
+/* 0x09 - 55001818-09 */
+	{
+		IMX6S,
+		MEM_256MB,
+		0,
+		"Consumer mono-core 1GHz, no eMMC, 256MB DDR3, 0/+70C",
+	},
+/* 0x0A - 55001818-10 */
+	{
+		IMX6DL,
+		MEM_512MB,
+		CCIMX6_HAS_WIRELESS | CCIMX6_HAS_EMMC,
+		"Industrial DualLite-core 800MHz, 4GB eMMC, 512MB DDR3, -40/+85C, Wireless",
+	},
+/* 0x0B - 55001818-11 */
+	{
+		IMX6DL,
+		MEM_1GB,
+		CCIMX6_HAS_WIRELESS | CCIMX6_HAS_BLUETOOTH | CCIMX6_HAS_EMMC,
+		"Consumer DualLite-core 1GHz, 4GB eMMC, 1GB DDR3, 0/+70C, Wireless, Bluetooth",
+	},
+/* 0x0C - 55001818-12 */
+	{
+		IMX6DL,
+		MEM_512MB,
+		CCIMX6_HAS_EMMC,
+		"Industrial DualLite-core 800MHz, 4GB eMMC, 512MB DDR3, -40/+85C",
+	},
+/* 0x0D - 55001818-13 */
+	{
+		IMX6D,
+		MEM_1GB,
+		CCIMX6_HAS_WIRELESS | CCIMX6_HAS_BLUETOOTH |
+		CCIMX6_HAS_KINETIS | CCIMX6_HAS_EMMC,
+		"Industrial dual-core 800MHz, 8GB eMMC, 1GB DDR3, -40/+85C, Wireless, Bluetooth, Kinetis",
+	},
+/* 0x0E - 55001818-14 */
+	{
+		IMX6D,
+		MEM_512MB,
+		CCIMX6_HAS_EMMC,
+		"Industrial dual-core 800MHz, 4GB eMMC, 512MB DDR3, -40/+85C",
+	},
+/* 0x0F - 55001818-15 */
+	{
+		IMX6Q,
+		MEM_512MB,
+		CCIMX6_HAS_EMMC,
+		"Industrial quad-core 800MHz, 4GB eMMC, 512MB DDR3, -40/+85C",
+	},
+/* 0x10 - 55001818-16 */
+	{
+		IMX6Q,
+		MEM_1GB,
+		CCIMX6_HAS_WIRELESS | CCIMX6_HAS_BLUETOOTH |
+		CCIMX6_HAS_KINETIS | CCIMX6_HAS_EMMC,
+		"Industrial quad-core 800MHz, 4GB eMMC, 1GB DDR3, -40/+85C, Wireless, Bluetooth, Kinetis",
+	},
+/* 0x11 - 55001818-17 */
+	{
+		IMX6Q,
+		MEM_1GB,
+		CCIMX6_HAS_WIRELESS | CCIMX6_HAS_BLUETOOTH |
+		CCIMX6_HAS_KINETIS | CCIMX6_HAS_EMMC,
+		"Industrial quad-core 800MHz, 8GB eMMC, 1GB DDR3, -40/+85C, Wireless, Bluetooth, Kinetis",
+	},
+};
+
+#define NUM_VARIANTS	17
+
+const char *cert_regions[] = {
+	"U.S.A.",
+	"International",
+	"Japan",
+};
 
 /* DDR3 calibration values for the different CC6 variants */
 struct addrvalue ddr3_calibration[NUM_VARIANTS + 1][12] = {
@@ -136,7 +272,7 @@ struct addrvalue ddr3_calibration[NUM_VARIANTS + 1][12] = {
 		{MX6_MMDC_P0_MPWRDLCTL, 0x3938403A},
 		{MX6_MMDC_P1_MPWRDLCTL, 0x4430453D},
 	},
-	/* Variant 0x03 */
+	/* Variant 0x03 (same as variant 0x0F) */
 	[0x03] = {
 		/* Write leveling */
 		{MX6_MMDC_P0_MPWLDECTRL0, 0x000C0019},
@@ -155,7 +291,7 @@ struct addrvalue ddr3_calibration[NUM_VARIANTS + 1][12] = {
 		{MX6_MMDC_P0_MPWRDLCTL, 0x3A3B433F},
 		{0, 0},
 	},
-	/* Variant 0x04 */
+	/* Variant 0x04 (same as variant 0x0D) */
 	[0x04] = {
 		/* Write leveling */
 		{MX6_MMDC_P0_MPWLDECTRL0, 0x000B0018},
@@ -212,6 +348,25 @@ struct addrvalue ddr3_calibration[NUM_VARIANTS + 1][12] = {
 		{MX6_MMDC_P0_MPWRDLCTL, 0x37373F3A},
 		{0, 0},
 	},
+	/* Variant 0x07 (same as 0x09) */
+	[0x07] = {
+		/* Write leveling */
+		{MX6_MMDC_P0_MPWLDECTRL0, 0x00290036},
+		{0, 0},
+		{0, 0},
+		{0, 0},
+		/* Read DQS gating */
+		{MX6_MMDC_P0_MPDGCTRL0, 0x42540247},
+		{0, 0},
+		{0, 0},
+		{0, 0},
+		/* Read delay */
+		{MX6_MMDC_P0_MPRDDLCTL, 0x40404847},
+		{0, 0},
+		/* Write delay */
+		{MX6_MMDC_P0_MPWRDLCTL, 0x40402D31},
+		{0, 0},
+	},
 	/* Variant 0x08 (same as 0x06) */
 	[0x08] = {
 		/* Write leveling */
@@ -231,7 +386,26 @@ struct addrvalue ddr3_calibration[NUM_VARIANTS + 1][12] = {
 		{MX6_MMDC_P0_MPWRDLCTL, 0x37373F3A},
 		{0, 0},
 	},
-	/* Variant 0x0A */
+	/* Variant 0x09 (same as 0x07) */
+	[0x09] = {
+		/* Write leveling */
+		{MX6_MMDC_P0_MPWLDECTRL0, 0x00290036},
+		{0, 0},
+		{0, 0},
+		{0, 0},
+		/* Read DQS gating */
+		{MX6_MMDC_P0_MPDGCTRL0, 0x42540247},
+		{0, 0},
+		{0, 0},
+		{0, 0},
+		/* Read delay */
+		{MX6_MMDC_P0_MPRDDLCTL, 0x40404847},
+		{0, 0},
+		/* Write delay */
+		{MX6_MMDC_P0_MPWRDLCTL, 0x40402D31},
+		{0, 0},
+	},
+	/* Variant 0x0A (same as variant 0x0C) */
 	[0x0A] = {
 		/* Write leveling */
 		{MX6_MMDC_P0_MPWLDECTRL0, 0x00270036},
@@ -268,6 +442,82 @@ struct addrvalue ddr3_calibration[NUM_VARIANTS + 1][12] = {
 		/* Write delay */
 		{MX6_MMDC_P0_MPWRDLCTL, 0x36352D31},
 		{MX6_MMDC_P1_MPWRDLCTL, 0x3130332D},
+	},
+	/* Variant 0x0C (same as variant 0x0A) */
+	[0x0C] = {
+		/* Write leveling */
+		{MX6_MMDC_P0_MPWLDECTRL0, 0x00270036},
+		{MX6_MMDC_P0_MPWLDECTRL1, 0x00310033},
+		{0, 0},
+		{0, 0},
+		/* Read DQS gating */
+		{MX6_MMDC_P0_MPDGCTRL0, 0x42520243},
+		{MX6_MMDC_P0_MPDGCTRL1, 0x0236023F},
+		{0, 0},
+		{0, 0},
+		/* Read delay */
+		{MX6_MMDC_P0_MPRDDLCTL, 0x45474B4A},
+		{0, 0},
+		/* Write delay */
+		{MX6_MMDC_P0_MPWRDLCTL, 0x28282326},
+		{0, 0},
+	},
+	/* Variant 0x0D (same as variant 0x04) */
+	[0x0D] = {
+		/* Write leveling */
+		{MX6_MMDC_P0_MPWLDECTRL0, 0x000B0018},
+		{MX6_MMDC_P0_MPWLDECTRL1, 0x00320023},
+		{MX6_MMDC_P1_MPWLDECTRL0, 0x00200038},
+		{MX6_MMDC_P1_MPWLDECTRL1, 0x00300033},
+		/* Read DQS gating */
+		{MX6_MMDC_P0_MPDGCTRL0, 0x43430345},
+		{MX6_MMDC_P0_MPDGCTRL1, 0x03370339},
+		{MX6_MMDC_P1_MPDGCTRL0, 0x43500356},
+		{MX6_MMDC_P1_MPDGCTRL1, 0x0348032A},
+		/* Read delay */
+		{MX6_MMDC_P0_MPRDDLCTL, 0x3E33353A},
+		{MX6_MMDC_P1_MPRDDLCTL, 0x37383141},
+		/* Write delay */
+		{MX6_MMDC_P0_MPWRDLCTL, 0x3B3A433D},
+		{MX6_MMDC_P1_MPWRDLCTL, 0x4633483E},
+	},
+	/* Variant 0x0F (same as variant 0x03) */
+	[0x0F] = {
+		/* Write leveling */
+		{MX6_MMDC_P0_MPWLDECTRL0, 0x000C0019},
+		{MX6_MMDC_P0_MPWLDECTRL1, 0x00310024},
+		{0, 0},
+		{0, 0},
+		/* Read DQS gating */
+		{MX6_MMDC_P0_MPDGCTRL0, 0x43450348},
+		{MX6_MMDC_P0_MPDGCTRL1, 0x03330339},
+		{0, 0},
+		{0, 0},
+		/* Read delay */
+		{MX6_MMDC_P0_MPRDDLCTL, 0x3F38393C},
+		{0, 0},
+		/* Write delay */
+		{MX6_MMDC_P0_MPWRDLCTL, 0x3A3B433F},
+		{0, 0},
+	},
+	/* Variant 0x11 */
+	[0x11] = {
+		/* Write leveling */
+		{MX6_MMDC_P0_MPWLDECTRL0, 0x0013001E},
+		{MX6_MMDC_P0_MPWLDECTRL1, 0x003B002D},
+		{MX6_MMDC_P1_MPWLDECTRL0, 0x00280041},
+		{MX6_MMDC_P1_MPWLDECTRL1, 0x0037003E},
+		/* Read DQS gating */
+		{MX6_MMDC_P0_MPDGCTRL0, 0x434C034F},
+		{MX6_MMDC_P0_MPDGCTRL1, 0x033F0344},
+		{MX6_MMDC_P1_MPDGCTRL0, 0x4358035F},
+		{MX6_MMDC_P1_MPDGCTRL1, 0x034E0332},
+		/* Read delay */
+		{MX6_MMDC_P0_MPRDDLCTL, 0x3D33353A},
+		{MX6_MMDC_P1_MPRDDLCTL, 0x37383240},
+		/* Write delay */
+		{MX6_MMDC_P0_MPWRDLCTL, 0x3C3B453E},
+		{MX6_MMDC_P1_MPWRDLCTL, 0x47374A40},
 	},
 };
 
@@ -490,33 +740,54 @@ iomux_v3_cfg_t const usdhc2_pads[] = {
 	MX6_PAD_SD2_DAT3__USDHC2_DAT3	| MUX_PAD_CTRL(USDHC_PAD_CTRL),
 };
 
-int mmc_get_env_devno(void)
+int mmc_get_bootdevindex(void)
 {
-	u32 soc_sbmr = readl(SRC_BASE_ADDR + 0x4);
+	struct src *psrc = (struct src *)SRC_BASE_ADDR;
+	unsigned reg;
+
+	if (readl(&psrc->gpr10) & (1 << 28))
+		reg = readl(&psrc->gpr9);
+	else
+		reg = readl(&psrc->sbmr1);
 
 	/* BOOT_CFG2[4] and BOOT_CFG2[3] denote boot media:
 	 * 01:	SDHC2 (uSD card)
 	 * 11:	SDHC4 (eMMC)
 	 */
-	switch((soc_sbmr & 0x00001800) >> 11) {
+	switch((reg & 0x00001800) >> 11) {
 	case 1:
-		return CONFIG_MMCDEV_USDHC2;	/* SDHC2 (uSD) */
+		/* SDHC2 (uSD) */
+		if (board_has_emmc())
+			return 1;	/* index of USDHC2 if SOM has eMMC */
+		else
+			return 0;	/* index of USDHC2 if SOM has no eMMC */
 	case 3:
-		return CONFIG_MMCDEV_USDHC4;	/* SDHC4 (eMMC) */
+		return 0;	/* index of SDHC4 (eMMC) */
 	}
 
 	return -1;
 }
 
+int mmc_get_env_devno(void)
+{
+	return mmc_get_bootdevindex();
+}
+
 int mmc_get_env_partno(void)
 {
-	u32 soc_sbmr = readl(SRC_BASE_ADDR + 0x4);
+	struct src *psrc = (struct src *)SRC_BASE_ADDR;
+	unsigned reg;
+
+	if (readl(&psrc->gpr10) & (1 << 28))
+		reg = readl(&psrc->gpr9);
+	else
+		reg = readl(&psrc->sbmr1);
 
 	/* BOOT_CFG2[4] and BOOT_CFG2[3] denote boot media:
 	 * 01:	SDHC2 (uSD card)
 	 * 11:	SDHC4 (eMMC)
 	 */
-	switch((soc_sbmr & 0x00001800) >> 11) {
+	switch((reg & 0x00001800) >> 11) {
 	case 1:
 		return 0;	/* When booting from SDHC2 (uSD) the
 				 * environment will be saved to the unique
@@ -531,23 +802,6 @@ int mmc_get_env_partno(void)
 	return -1;
 }
 
-int board_mmc_getcd(struct mmc *mmc)
-{
-	struct fsl_esdhc_cfg *cfg = (struct fsl_esdhc_cfg *)mmc->priv;
-	int ret = 0;
-
-	switch (cfg->esdhc_base) {
-	case USDHC2_BASE_ADDR:
-		ret = 1; /* uSD/uSDHC2 does not connect CD. Assume present */
-		break;
-	case USDHC4_BASE_ADDR:
-		ret = 1; /* eMMC/uSDHC4 is always present */
-		break;
-	}
-
-	return ret;
-}
-
 int board_mmc_init(bd_t *bis)
 {
 	int i;
@@ -555,16 +809,22 @@ int board_mmc_init(bd_t *bis)
 	for (i = 0; i < CONFIG_SYS_FSL_USDHC_NUM; i++) {
 		switch (i) {
 		case 0:
-			/* USDHC4 (eMMC) */
-			imx_iomux_v3_setup_multiple_pads(
-					usdhc4_pads, ARRAY_SIZE(usdhc4_pads));
-			usdhc_cfg[i].sdhc_clk = mxc_get_clock(MXC_ESDHC4_CLK);
+			if (board_has_emmc()) {
+				/* USDHC4 (eMMC) */
+				imx_iomux_v3_setup_multiple_pads(usdhc4_pads,
+						ARRAY_SIZE(usdhc4_pads));
+				usdhc_cfg[i].sdhc_clk = mxc_get_clock(MXC_ESDHC4_CLK);
+				if (fsl_esdhc_initialize(bis, &usdhc_cfg[i]))
+					printf("Warning: failed to initialize USDHC4\n");
+			}
 			break;
 		case 1:
 			/* USDHC2 (uSD) */
 			imx_iomux_v3_setup_multiple_pads(
 					usdhc2_pads, ARRAY_SIZE(usdhc2_pads));
 			usdhc_cfg[i].sdhc_clk = mxc_get_clock(MXC_ESDHC2_CLK);
+			if (fsl_esdhc_initialize(bis, &usdhc_cfg[i]))
+				printf("Warning: failed to initialize USDHC2\n");
 			break;
 		default:
 			printf("Warning: you configured more USDHC controllers"
@@ -572,13 +832,12 @@ int board_mmc_init(bd_t *bis)
 			return 0;
 		}
 
-		if (fsl_esdhc_initialize(bis, &usdhc_cfg[i]))
-			printf("Warning: failed to initialize mmc dev %d\n", i);
 	}
 
-	mmc_dev = mmc_get_dev(CONFIG_SYS_STORAGE_DEV);
+	/* Get mmc system device */
+	mmc_dev = mmc_get_dev(mmc_get_bootdevindex());
 	if (NULL == mmc_dev)
-		printf("Warning: failed to get sys storage device\n");
+		printf("Warning: failed to get mmc sys storage device\n");
 
 	return 0;
 }
@@ -615,7 +874,7 @@ static const struct boot_mode board_boot_modes[] = {
 	{"sd2",	 MAKE_CFGVAL(0x40, 0x28, 0x00, 0x00)},
 	{"sd3",	 MAKE_CFGVAL(0x40, 0x30, 0x00, 0x00)},
 	/* 8 bit bus width */
-	{"emmc", MAKE_CFGVAL(0x40, 0x38, 0x00, 0x00)},
+	{"emmc", MAKE_CFGVAL(0x60, 0x58, 0x00, 0x00)},
 	{NULL,	 0},
 };
 #endif
@@ -638,6 +897,10 @@ void update_ddr3_calibration(u8 variant)
 int ccimx6_late_init(void)
 {
 	int ret = 0;
+#ifdef CONFIG_CMD_MMC
+	char cmd[80];
+#endif
+	char var[5];
 
 	/* Override DDR3 calibration values basing on HWID variant */
 	update_ddr3_calibration(my_hwid.variant);
@@ -661,25 +924,18 @@ int ccimx6_late_init(void)
 #endif
 
 #ifdef CONFIG_CMD_MMC
-	/* If undefined, determine 'mmcdev' variable depending on boot media */
-	if (NULL == getenv("mmcdev")) {
-		u32 soc_sbmr = readl(SRC_BASE_ADDR + 0x4);
-
-		switch((soc_sbmr & 0x00001800) >> 11) {
-		case 1:
-			setenv_ulong("mmcdev", 1);	/* SDHC2 (uSD) */
-			break;
-		case 3:
-			setenv_ulong("mmcdev", 0);	/* SDHC4 (eMMC) */
-			break;
-		}
-	}
+	/* Set $mmcbootdev to MMC boot device index */
+	sprintf(cmd, "setenv -f mmcbootdev %x", mmc_get_bootdevindex());
+	run_command(cmd, 0);
 #endif
+
+	/* Set $module_variant variable */
+	sprintf(var, "0x%02x", my_hwid.variant);
+	setenv("module_variant", var);
 
 	return 0;
 }
 
-#ifdef CONFIG_HAS_HWID
 void board_print_hwid(u32 *hwid)
 {
 	int i;
@@ -944,9 +1200,35 @@ void fdt_fixup_hwid(void *fdt)
 				 strlen(str) + 1, 1);
 	}
 }
-#endif /* CONFIG_HAS_HWID */
 
-int get_carrier_board_version(void)
+int board_has_emmc(void)
+{
+	if (is_valid_hwid(my_hwid.variant))
+		return (ccimx6_variants[my_hwid.variant].capabilities &
+				    CCIMX6_HAS_EMMC);
+	else
+		return 1; /* assume it has if invalid HWID */
+}
+
+int board_has_wireless(void)
+{
+	if (is_valid_hwid(my_hwid.variant))
+		return (ccimx6_variants[my_hwid.variant].capabilities &
+				    CCIMX6_HAS_WIRELESS);
+	else
+		return 1; /* assume it has if invalid HWID */
+}
+
+int board_has_bluetooth(void)
+{
+	if (is_valid_hwid(my_hwid.variant))
+		return (ccimx6_variants[my_hwid.variant].capabilities &
+				    CCIMX6_HAS_BLUETOOTH);
+	else
+		return 1; /* assume it has if invalid HWID */
+}
+
+int get_carrierboard_version(void)
 {
 #ifdef CONFIG_HAS_CARRIERBOARD_VERSION
 	u32 version;
@@ -969,7 +1251,7 @@ void fdt_fixup_carrierboard(void *fdt)
 {
 	char str[20];
 
-	sprintf(str, "%d", get_carrier_board_version());
+	sprintf(str, "%d", get_carrierboard_version());
 	do_fixup_by_path(fdt, "/", "digi,carrierboard,version", str,
 			 strlen(str) + 1, 1);
 }
@@ -978,18 +1260,17 @@ void fdt_fixup_carrierboard(void *fdt)
 int checkboard(void)
 {
 	const char *bootdevice;
-	int board_ver = get_carrier_board_version();
+	int board_ver = get_carrierboard_version();
 
 	printf("Board: %s ", CONFIG_BOARD_DESCRIPTION);
 	if (CARRIERBOARD_VERSION_UNDEFINED == board_ver)
 		printf("(undefined version)\n");
 	else
 		printf("v%d\n", board_ver);
-#ifdef CONFIG_HAS_HWID
 	if (!get_hwid())
 		printf("Variant: 0x%02x - %s\n", my_hwid.variant,
 			ccimx6_variants[my_hwid.variant].id_string);
-#endif /* CONFIG_HAS_HWID */
+
 	bootdevice = boot_mode_string();
 	printf("Boot device: %s", bootdevice);
 	if (!strcmp(bootdevice, "esdhc2"))
@@ -1022,18 +1303,18 @@ void fdt_fixup_mac(void *fdt, char *varname, char *node)
 void ft_board_setup(void *blob, bd_t *bd)
 {
 
-#ifdef CONFIG_HAS_HWID
 	/* Re-read HWID which could have been overriden by U-Boot commands */
 	if (!get_hwid())
 		fdt_fixup_hwid(blob);
-#endif /* CONFIG_HAS_HWID */
 
 #ifdef CONFIG_HAS_CARRIERBOARD_VERSION
 	fdt_fixup_carrierboard(blob);
 #endif /* CONFIG_HAS_CARRIERBOARD_VERSION */
 
-	fdt_fixup_mac(blob, "wlanaddr", "/wireless");
-	fdt_fixup_mac(blob, "btaddr", "/bluetooth");
+	if (board_has_wireless())
+		fdt_fixup_mac(blob, "wlanaddr", "/wireless");
+	if (board_has_bluetooth())
+		fdt_fixup_mac(blob, "btaddr", "/bluetooth");
 }
 #endif /* CONFIG_OF_BOARD_SETUP */
 
@@ -1043,10 +1324,10 @@ static int write_chunk(struct mmc *mmc, otf_data_t *otfd, unsigned int dstblk,
 	int sectors;
 	unsigned long written, read, verifyaddr;
 
-	printf("\nWriting chunk...\n");
+	printf("\nWriting chunk...");
 	/* Check WP */
 	if (mmc_getwp(mmc) == 1) {
-		printf("Error: card is write protected!\n");
+		printf("[Error]: card is write protected!\n");
 		return -1;
 	}
 
@@ -1059,7 +1340,7 @@ static int write_chunk(struct mmc *mmc, otf_data_t *otfd, unsigned int dstblk,
 
 	/* Check if chunk fits */
 	if (sectors + dstblk > otfd->part->start + otfd->part->size) {
-		printf("Error: length of data exceeds partition size\n");
+		printf("[Error]: length of data exceeds partition size\n");
 		return -1;
 	}
 
@@ -1067,11 +1348,13 @@ static int write_chunk(struct mmc *mmc, otf_data_t *otfd, unsigned int dstblk,
 	debug("writing chunk of 0x%x bytes (0x%x sectors) "
 		"from 0x%x to block 0x%x\n",
 		chunklen, sectors, otfd->loadaddr, dstblk);
-	written = mmc->block_dev.block_write(CONFIG_SYS_STORAGE_DEV, dstblk,
-					     sectors,
+	written = mmc->block_dev.block_write(mmc_dev_index, dstblk, sectors,
 					     (const void *)otfd->loadaddr);
-	if (written != sectors)
+	if (written != sectors) {
+		printf("[Error]: written sectors != sectors to write\n");
 		return -1;
+	}
+	printf("[OK]\n");
 
 	/* Verify written chunk if $loadaddr + chunk size does not overlap
 	 * $verifyaddr (where the read-back copy will be placed)
@@ -1079,18 +1362,28 @@ static int write_chunk(struct mmc *mmc, otf_data_t *otfd, unsigned int dstblk,
 	verifyaddr = getenv_ulong("verifyaddr", 16, 0);
 	if (otfd->loadaddr + sectors * mmc_dev->blksz < verifyaddr) {
 		/* Read back data... */
-		printf("Reading back chunk...\n");
-		read = mmc->block_dev.block_read(CONFIG_SYS_STORAGE_DEV, dstblk,
-						 sectors, (void *)verifyaddr);
-		if (read != sectors)
+		printf("Reading back chunk...");
+		read = mmc->block_dev.block_read(mmc_dev_index, dstblk, sectors,
+						 (void *)verifyaddr);
+		if (read != sectors) {
+			printf("[Error]: read sectors != sectors to read\n");
 			return -1;
+		}
+		printf("[OK]\n");
 		/* ...then compare */
-		printf("Verifying chunk...\n");
-		return memcmp((const void *)otfd->loadaddr,
+		printf("Verifying chunk...");
+		if (memcmp((const void *)otfd->loadaddr,
 			      (const void *)verifyaddr,
-			      sectors * mmc_dev->blksz);
+			      sectors * mmc_dev->blksz)) {
+			printf("[Error]\n");
+			return -1;
+		} else {
+			printf("[OK]\n");
+			return 0;
+		}
 	} else {
-		printf("Cannot verify chunk. It overlaps $verifyaddr!\n");
+		printf("[Warning]: Cannot verify chunk. "
+			"It overlaps $verifyaddr!\n");
 		return 0;
 	}
 }
@@ -1100,7 +1393,14 @@ int board_update_chunk(otf_data_t *otfd)
 {
 	static unsigned int chunk_len = 0;
 	static unsigned int dstblk = 0;
-	struct mmc *mmc = find_mmc_device(CONFIG_SYS_STORAGE_DEV);
+	struct mmc *mmc;
+
+	if (mmc_dev_index == -1)
+		mmc_dev_index = getenv_ulong("mmcdev", 16,
+					     mmc_get_bootdevindex());
+	mmc = find_mmc_device(mmc_dev_index);
+	if (NULL == mmc)
+		return -1;
 
 	/* Initialize dstblk and local variables */
 	if (otfd->flags & OTF_FLAG_INIT) {
@@ -1158,6 +1458,24 @@ int board_update_chunk(otf_data_t *otfd)
 	/* Set otfd offset pointer to offset in RAM where new bytes would
 	 * be written. This offset may be reused by caller */
 	otfd->offset = chunk_len;
+
+	return 0;
+}
+
+int ccimx6_early_init(void)
+{
+	if (get_hwid()) {
+		printf("Cannot read HWID\n");
+		return -1;
+	}
+
+	/*
+	 * Override DDR3 calibration values basing on HWID variant.
+	 * NOTE: Re-writing the DDR3 calibration values is a delicate operation
+	 * that must be done before other systems (like VPU) are enabled and can
+	 * be accessing the RAM on their own.
+	 */
+	update_ddr3_calibration(my_hwid.variant);
 
 	return 0;
 }

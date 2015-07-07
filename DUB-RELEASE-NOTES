@@ -2,6 +2,18 @@
 Digi U-Boot RELEASE NOTES
 -------------------------
 
+v2013.04 - DUB-2.3.4.1, released on 2015/06/29
+	- Added DDR3 calibration data for variant 0x11.
+	- hush: fix some quoted variable expansion issues.
+
+
+v2013.04 - DUB-2.3.4.1, released on 2015/06/22
+	- Added support for variants 0x07, 0x09, 0x0C, 0x0D, 0x0E, 0x0F, 0x10,
+	  and 0x11.
+	- Added support to 'update' command to write to uSD card.
+	- Other minor fixes.
+
+
 v2013.04 - DUB-2.3.3.2, released on 2015/03/26
 	- Added DDR3 calibration data for variants:
 		0x05: Consumer dual-core 1GHz, 4GB eMMC, 1GB DDR3, 0/+70C
@@ -55,7 +67,7 @@ v2013.04 - DUB-2.2.1.2, released on 2014/06/20
 	- Added support for ConnectCore 6 SBC platform (ccimx6sbc).
 	- Fixed TFTP on-the-fly update mechanism.
 	- Added 'updatefile' command to update files into FAT partitions.
-	- Added verification step to 'update' command. 
+	- Added verification step to 'update' command.
 	- Changed default firmware file names to match Yocto's default
 	  build artifact filenames.
 	- Fixup FDT with HWID information

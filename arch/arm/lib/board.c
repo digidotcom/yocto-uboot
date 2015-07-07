@@ -68,10 +68,6 @@ extern int  AT91F_DataflashInit(void);
 extern void dataflash_print_info(void);
 #endif
 
-#ifdef CONFIG_HAS_HWID
-extern int get_hwid(void);
-#endif
-
 #ifdef CONFIG_BOARD_BEFORE_MLOOP_INIT
 extern int board_before_mloop_init(void);
 #endif
@@ -623,10 +619,6 @@ void board_init_r(gd_t *id, ulong dest_addr)
 		env_relocate();
 	else
 		set_default_env(NULL);
-
-#if defined(CONFIG_HAS_HWID)
-	get_hwid();
-#endif
 
 #if defined(CONFIG_CMD_BSP)
        if (bsp_init())             /* initialize common Digi BSP stuff */

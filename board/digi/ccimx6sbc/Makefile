@@ -20,6 +20,10 @@
 include $(TOPDIR)/config.mk
 include $(TOPDIR)/board/$(VENDOR)/config.mk
 
+ifneq ($(OBJTREE),$(SRCTREE))
+$(shell mkdir -p $(obj)../ccimx6)
+endif
+
 LIB    = $(obj)lib$(BOARD).o
 
 COBJS  := ccimx6sbc.o ../ccimx6/ccimx6.o

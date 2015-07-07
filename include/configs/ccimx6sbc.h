@@ -32,12 +32,9 @@
 #endif
 
 #define CONFIG_SYS_FSL_USDHC_NUM	2
-#define CONFIG_MMCDEV_USDHC4		0	/* mmc index for SHDC4 (eMMC) */
-#define CONFIG_MMCDEV_USDHC2		1	/* mmc index for SHDC2 (uSD) */
 
 /* MMC device and partition where U-Boot image is */
-#define CONFIG_SYS_STORAGE_DEV		CONFIG_MMCDEV_USDHC4	/* SDHC4 (eMMC) */
-#define CONFIG_SYS_BOOT_PART		1	/* Boot part 1 */
+#define CONFIG_SYS_BOOT_PART_EMMC	1	/* Boot part 1 on eMMC */
 #define CONFIG_SYS_BOOT_PART_OFFSET	1024
 #define CONFIG_SYS_BOOT_PART_SIZE	((2 * 1024 * 1024) - CONFIG_SYS_BOOT_PART_OFFSET)
 

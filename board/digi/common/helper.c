@@ -100,32 +100,6 @@ const char *get_source_string(int src)
 	return "";
 }
 
-int get_target_partition(char *partname, disk_partition_t *info)
-{
-	if (!strcmp(partname, "uboot")) {
-		/* Simulate partition data for U-Boot */
-		block_dev_desc_t *mmc_dev;
-
-		mmc_dev = mmc_get_dev(CONFIG_SYS_STORAGE_DEV);
-		if (NULL == mmc_dev) {
-			debug("Cannot determine sys storage device\n");
-			return -1;
-		}
-
-		info->start = CONFIG_SYS_BOOT_PART_OFFSET / mmc_dev->blksz;
-		info->size = CONFIG_SYS_BOOT_PART_SIZE / mmc_dev->blksz;
-		strcpy((char *)info->name, partname);
-	} else {
-		/* Not a reserved name. Must be a partition name */
-		/* Look up the device */
-		if (get_partition_byname(CONFIG_SYS_STORAGE_MEDIA,
-					 __stringify(CONFIG_SYS_STORAGE_DEV),
-					 partname, info) < 0)
-			return -1;
-	}
-	return 0;
-}
-
 int get_fw_filename(int argc, char * const argv[], int src, char *filename)
 {
 	switch (src) {

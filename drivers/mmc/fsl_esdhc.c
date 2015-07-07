@@ -313,6 +313,9 @@ esdhc_send_cmd(struct mmc *mmc, struct mmc_cmd *cmd, struct mmc_data *data)
 	/* Figure out the transfer arguments */
 	xfertyp = esdhc_xfertyp(cmd, data);
 
+	/* Mask all irqs */
+	esdhc_write32(&regs->irqsigen, 0);
+
 	/* Send the command */
 	esdhc_write32(&regs->cmdarg, cmd->cmdarg);
 #if defined(CONFIG_FSL_USDHC)
@@ -323,15 +326,11 @@ esdhc_send_cmd(struct mmc *mmc, struct mmc_cmd *cmd, struct mmc_data *data)
 	esdhc_write32(&regs->xfertyp, xfertyp);
 #endif
 
-	/* Mask all irqs */
-	esdhc_write32(&regs->irqsigen, 0);
-
 	/* Wait for the command to complete */
 	while (!(esdhc_read32(&regs->irqstat) & (IRQSTAT_CC | IRQSTAT_CTOE)))
 		;
 
 	irqstat = esdhc_read32(&regs->irqstat);
-	esdhc_write32(&regs->irqstat, irqstat);
 
 	/* Reset CMD and DATA portions on error */
 	if (irqstat & (CMD_ERR | IRQSTAT_CTOE)) {

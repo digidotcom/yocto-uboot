@@ -30,7 +30,6 @@ enum {
 int confirm_msg(char *msg);
 int get_source(int argc, char * const argv[], char **devpartno, char **fs);
 const char *get_source_string(int src);
-int get_target_partition(char *partname, disk_partition_t *info);
 int get_fw_filename(int argc, char * const argv[], int src, char *filename);
 int get_default_filename(char *partname, char *filename, int cmd);
 

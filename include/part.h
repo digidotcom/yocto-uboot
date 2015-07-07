@@ -124,8 +124,8 @@ int get_device(const char *ifname, const char *dev_str,
 int get_device_and_partition(const char *ifname, const char *dev_part_str,
 			     block_dev_desc_t **dev_desc,
 			     disk_partition_t *info, int allow_whole_dev);
-int get_partition_byname(const char *ifname, const char *dev_str,
-			 char *part_name, disk_partition_t *info);
+int get_partition_bynameorindex(const char *ifname, const char *dev_str,
+				char *part_nameorindex, disk_partition_t *info);
 #else
 static inline block_dev_desc_t *get_dev(const char *ifname, int dev)
 { return NULL; }
@@ -153,7 +153,7 @@ static inline int get_device_and_partition(const char *ifname,
 { *dev_desc = NULL; return -1; }
 static inline int get_partition_byname(const char *ifname, const char *dev_str,
 				       char *part_name, disk_partition_t *info)
-{ *info = NULL; return -1; }
+{ return -1; }
 #endif
 
 #ifdef CONFIG_MAC_PARTITION

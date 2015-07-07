@@ -161,7 +161,7 @@ U_BOOT_CMD(
 	"<os> [source] [extra-args...]\n"
 	" Description: Boots <os> via <source>\n"
 	" Arguments:\n"
-	"   - os:           a partition name or one of the reserved names: \n"
+	"   - os:           one of the operating systems reserved names: \n"
 	"                   linux|android\n"
 	"   - [source]:     " CONFIG_DBOOT_SUPPORTED_SOURCES_LIST "\n"
 	"   - [extra-args]: extra arguments depending on 'source'\n"
