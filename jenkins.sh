@@ -28,6 +28,7 @@ while read pl mt tt; do
 	eval "${pl}_make_target=\"${mt}\""
 	eval "${pl}_toolchain_type=\"${tt}\""
 done<<-_EOF_
+	ccimx6qsbc2GB    u-boot.imx  cortexa9hf
 	ccimx6qsbc       u-boot.imx  cortexa9hf
 	ccimx6qsbc512MB  u-boot.imx  cortexa9hf
 	ccimx6dlsbc      u-boot.imx  cortexa9hf

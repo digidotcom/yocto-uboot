@@ -241,6 +241,14 @@ struct ccimx6_variant ccimx6_variants[] = {
 		CCIMX6_HAS_KINETIS | CCIMX6_HAS_EMMC,
 		"Industrial quad-core 800MHz, 8GB eMMC, 1GB DDR3, -40/+85C, Wireless, Bluetooth, Kinetis",
 	},
+/* 0x12 - 55001818-18 */
+	{
+		IMX6Q,
+		MEM_2GB,
+		CCIMX6_HAS_WIRELESS | CCIMX6_HAS_BLUETOOTH |
+		CCIMX6_HAS_EMMC,
+		"Consumer quad-core 1.2GHz, 4GB eMMC, 2GB DDR3, -20/+85C, Wireless, Bluetooth",
+	},
 };
 
 #define NUM_VARIANTS	17
@@ -894,6 +902,151 @@ void update_ddr3_calibration(u8 variant)
 	}
 }
 
+static void ccimx6_detect_spurious_wakeup(void) {
+	unsigned int carrierboard_ver = get_carrierboard_version();
+	unsigned char event_a, event_b, event_c, event_d, fault_log;
+
+	/* Check whether we come from a shutdown state */
+	pmic_read_reg(DA9063_FAULT_LOG_ADDR, &fault_log);
+	debug("DA9063 fault_log 0x%08x\n", fault_log);
+
+	if (fault_log & (DA9063_E_nSHUT_DOWN |
+			 DA9063_E_nKEY_RESET)) {
+		/* Clear fault log nSHUTDOWN or nKEY_RESET bit */
+		pmic_write_reg(DA9063_FAULT_LOG_ADDR, fault_log &
+			      (DA9063_E_nSHUT_DOWN | DA9063_E_nKEY_RESET));
+
+		pmic_read_reg(DA9063_EVENT_A_ADDR, &event_a);
+		pmic_read_reg(DA9063_EVENT_B_ADDR, &event_b);
+		pmic_read_reg(DA9063_EVENT_C_ADDR, &event_c);
+		pmic_read_reg(DA9063_EVENT_D_ADDR, &event_d);
+
+		/* Clear event registers */
+		pmic_write_reg(DA9063_EVENT_A_ADDR, event_a);
+		pmic_write_reg(DA9063_EVENT_B_ADDR, event_b);
+		pmic_write_reg(DA9063_EVENT_C_ADDR, event_c);
+		pmic_write_reg(DA9063_EVENT_D_ADDR, event_d);
+
+		/* Return if the wake up is valid */
+		if (event_a) {
+			/* Valid wake up sources include RTC ticks and alarm,
+			 * onKey and ADC measurement */
+			if (event_a & (DA9063_E_TICK | DA9063_E_ALARM |
+				       DA9063_E_nONKEY | DA9063_E_ADC_RDY)) {
+				debug("WAKE: Event A: 0x%02x\n", event_a);
+				return;
+			}
+		}
+
+		/* All events in B are wake-up capable  */
+		if (event_b) {
+			unsigned int valid_mask = 0xFF;
+
+			/* Any event B is valid, except E_WAKE on SBCv1 which
+			 * is N/C */
+			if (carrierboard_ver == 1)
+				valid_mask &= ~DA9063_E_WAKE;
+
+			if (event_b & valid_mask) {
+				debug("WAKE: Event B: 0x%02x wake-up valid 0x%02x\n",
+						event_b, valid_mask);
+				return;
+			}
+		}
+
+		/* The only wake-up OTP enabled GPIOs in event C are:
+		 *   - GPIO5, valid on BT variants
+		 *   - GPIO6, valid on wireless variants
+		 */
+		if (event_c) {
+			unsigned int valid_mask = 0;
+
+			/* On variants with bluetooth the BT_HOST_WAKE
+			 * (GPIO5) pin is valid. */
+			if (board_has_bluetooth())
+				valid_mask |= DA9063_E_GPIO5;
+			/* On variants with wireless the WLAN_HOST_WAKE
+			 * (GPIO6) pin is valid. */
+			if (board_has_wireless())
+				valid_mask |= DA9063_E_GPIO6;
+
+			if (event_c & valid_mask) {
+				debug("WAKE: Event C: 0x%02x wake-up valid 0x%02x\n",
+						event_c, valid_mask);
+				return;
+			}
+		}
+
+		/* The only wake-up OTP enabled GPIOs in event D are:
+		 *  - GPIO8, valid on MCA variants
+		 *  - GPIO9, N/C on SBCs, never valid
+		 */
+		if (event_d) {
+			unsigned int valid_mask = 0;
+
+			/* On variants with kinetis GPIO8/SYS_EN is valid */
+			if (board_has_kinetis())
+			       valid_mask |= DA9063_E_GPIO8;
+
+			if (event_d & valid_mask) {
+				debug("WAKE: Event D: 0x%02x wake-up valid 0x%02x\n",
+						event_d, valid_mask);
+				return;
+			}
+		}
+
+		/* If we reach here the event is spurious */
+		printf("Spurious wake, back to standby.\n");
+		debug("Events A:%02x B:%02x C:%02x D:%02x\n", event_a, event_b,
+			event_c, event_d);
+
+		/* Make sure nRESET is asserted when waking up */
+		pmic_write_bitfield(DA9063_CONTROL_B_ADDR, 0x1, 3, 0x1);
+
+		/* De-assert SYS_EN to get to powerdown mode. The OTP
+		 * is not reread when coming up so the wake-up
+		 * supression configuration will be preserved .*/
+		pmic_write_bitfield(DA9063_CONTROL_A_ADDR, 0x1, 0, 0x0);
+
+		/* Don't come back */
+		while (1)
+			udelay(1000);
+	}
+
+	return;
+}
+
+static int ccimx6_fixup(void)
+{
+	if (!board_has_bluetooth()) {
+		/* Avoid spurious wake ups */
+		if (pmic_write_bitfield(DA9063_GPIO4_5_ADDR, 0x1, 7, 0x1)) {
+			printf("Failed to suppress GPIO5 wakeup.");
+			return -1;
+		}
+	}
+
+	if (!board_has_wireless()) {
+		/* Avoid spurious wake ups */
+		if (pmic_write_bitfield(DA9063_GPIO6_7_ADDR, 0x1, 3, 0x1)) {
+			printf("Failed to suppress GPIO6 wakeup.");
+			return -1;
+		}
+	}
+
+	if (!board_has_kinetis()) {
+		/* Avoid spurious wake ups */
+		if (pmic_write_bitfield(DA9063_GPIO8_9_ADDR, 0x1, 3, 0x1)) {
+			printf("Failed to suppress GPIO8 wakeup.");
+			return -1;
+		}
+	}
+
+	ccimx6_detect_spurious_wakeup();
+
+	return 0;
+}
+
 int ccimx6_late_init(void)
 {
 	int ret = 0;
@@ -933,7 +1086,7 @@ int ccimx6_late_init(void)
 	sprintf(var, "0x%02x", my_hwid.variant);
 	setenv("module_variant", var);
 
-	return 0;
+	return ccimx6_fixup();
 }
 
 void board_print_hwid(u32 *hwid)
@@ -1224,6 +1377,15 @@ int board_has_bluetooth(void)
 	if (is_valid_hwid(my_hwid.variant))
 		return (ccimx6_variants[my_hwid.variant].capabilities &
 				    CCIMX6_HAS_BLUETOOTH);
+	else
+		return 1; /* assume it has if invalid HWID */
+}
+
+int board_has_kinetis(void)
+{
+	if (is_valid_hwid(my_hwid.variant))
+		return (ccimx6_variants[my_hwid.variant].capabilities &
+				    CCIMX6_HAS_KINETIS);
 	else
 		return 1; /* assume it has if invalid HWID */
 }

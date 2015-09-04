@@ -226,7 +226,7 @@
 		"mem=" __stringify(CONFIG_DDR_MB) "M " \
 		"fbmem=28M vmalloc=400M\"\0" \
 	"bootargs_mmc_android=setenv bootargs console=${console},${baudrate} " \
-		"${bootargs_android} androidboot.mmcdev=${mmcdev} " \
+		"${bootargs_android} androidboot.mmcdev=${mmcbootdev} " \
 		"androidboot.console=${console} " \
 		"${video_args} " \
 		"ethaddr=${ethaddr} wlanaddr=${wlanaddr} btaddr=${btaddr} " \
@@ -286,7 +286,7 @@
 	"if run loadscript; then " \
 		"source ${loadaddr};" \
 	"else " \
-		"dboot android mmc ${mmcdev}:${mmcpart}; " \
+		"dboot android mmc ${mmcbootdev}:${mmcpart}; " \
 	"fi;"
 
 #define CONFIG_ARP_TIMEOUT     200UL

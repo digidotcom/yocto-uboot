@@ -207,6 +207,7 @@ int bsp_init(void);
 int board_has_emmc(void);
 int board_has_wireless(void);
 int board_has_bluetooth(void);
+int board_has_kinetis(void);
 #endif /* __ASSEMBLY__ */
 
 #endif /* __DIGI_COMMON_H */

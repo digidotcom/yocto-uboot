@@ -10,9 +10,19 @@
 #ifndef __CCIMX6_H
 #define __CCIMX6_H
 
-/* DA9063 PMIC */
+/* DA9063 PMIC registers */
 #define DA9063_PAGE_CON			0x0
+#define DA9063_FAULT_LOG_ADDR		0x05
+#define DA9063_EVENT_A_ADDR		0x06
+#define DA9063_EVENT_B_ADDR		0x07
+#define DA9063_EVENT_C_ADDR		0x08
+#define DA9063_EVENT_D_ADDR		0x09
+#define DA9063_IRQ_MASK_B_ADDR		0x0b
+#define DA9063_CONTROL_A_ADDR		0x0e
+#define DA9063_CONTROL_B_ADDR		0x0f
+#define DA9063_GPIO4_5_ADDR		0x17
 #define DA9063_GPIO6_7_ADDR		0x18
+#define DA9063_GPIO8_9_ADDR		0x19
 #define DA9063_GPIO10_11_ADDR		0x1a
 #define DA9063_GPIO_MODE0_7_ADDR	0x1d
 #define DA9063_GPIO_MODE8_15_ADDR	0x1e
@@ -24,6 +34,35 @@
 #define DA9063_VARIANT_ID_ADDR		0x182
 #define DA9063_CUSTOMER_ID_ADDR		0x183
 #define DA9063_CONFIG_ID_ADDR		0x184
+
+/* DA9063 FAULT_LOG bitfields */
+#define DA9063_E_nSHUT_DOWN		0x40
+#define DA9063_E_nKEY_RESET		0x20
+
+/* DA9063 EVENT_A bitfields */
+#define DA9063_E_ADC_RDY		0x08
+#define DA9063_E_TICK			0x04
+#define DA9063_E_ALARM			0x02
+#define DA9063_E_nONKEY			0x01
+
+/* DA9063 EVENT_B bitfields */
+#define DA9063_E_VDD_WARN		0x80
+#define DA9063_E_VDD_MON		0x40
+#define DA9063_E_DVC_RDY		0x20
+#define DA9063_E_UVOV			0x10
+#define DA9063_E_LDO_LIM		0x08
+#define DA9063_E_COMP1V2		0x04
+#define DA9063_E_TEMP			0x02
+#define DA9063_E_WAKE			0x01
+
+/* DA9063 EVENT_C bitfields */
+#define DA9063_E_GPIO5			0x20
+#define DA9063_E_GPIO6			0x40
+#define DA9063_E_GPIO7			0x80
+
+/* DA9063 EVENT_D bitfields */
+#define DA9063_E_GPIO8			0x01
+#define DA9063_E_GPIO9			0x02
 
 /* Common ccimx6 functions */
 int pmic_read_reg(int reg, unsigned char *value);

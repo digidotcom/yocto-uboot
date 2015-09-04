@@ -41,9 +41,10 @@ struct ccimx6_variant {
 };
 
 /* RAM size */
-#define MEM_1GB		(1024 * 1024 * 1024)
-#define MEM_512MB	(512 * 1024 * 1024)
-#define MEM_256MB	(256 * 1024 * 1024)
+#define MEM_2GB		0x80000000
+#define MEM_1GB		0x40000000
+#define MEM_512MB	0x20000000
+#define MEM_256MB	0x10000000
 
 /* Capabilities */
 #define	CCIMX6_HAS_WIRELESS	(1 << 0)
