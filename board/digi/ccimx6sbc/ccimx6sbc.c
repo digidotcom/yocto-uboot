@@ -59,7 +59,6 @@ iomux_v3_cfg_t const sgtl5000_pads[] = {
 int setup_pmic_voltages(void)
 {
 	unsigned char dev_id, var_id, conf_id, cust_id;
-	unsigned int carrier_board_version = get_carrierboard_version();
 #ifdef CONFIG_I2C_MULTI_BUS
 	int ret;
 
@@ -106,17 +105,13 @@ int setup_pmic_voltages(void)
 		if (pmic_write_bitfield(DA9063_GPIO_MODE8_15_ADDR, 0x1, 3, 0x1))
 			printf("Could not set GPIO11 high\n");
 
-		if (carrier_board_version == 2) {
-			/* PWR_EN on the ccimx6sbc enables the +5V suppy and
-			 * comes from PMIC_GPIO7. Set this GPIO high to enable
-			 * +5V supply. */
-			if (pmic_write_bitfield(DA9063_GPIO6_7_ADDR, 0x3, 4,
-						0x3))
-				printf("Could not configure GPIO7\n");
-			if (pmic_write_bitfield(DA9063_GPIO_MODE0_7_ADDR, 0x1,
-						7, 0x1))
-				printf("Could not enable PWR_EN\n");
-		}
+		/* PWR_EN on the ccimx6sbc enables the +5V suppy and comes
+		 * from PMIC_GPIO7. Set this GPIO high to enable +5V supply.
+		 */
+		if (pmic_write_bitfield(DA9063_GPIO6_7_ADDR, 0x3, 4, 0x3))
+			printf("Could not configure GPIO7\n");
+		if (pmic_write_bitfield(DA9063_GPIO_MODE0_7_ADDR, 0x1, 7, 0x1))
+			printf("Could not enable PWR_EN\n");
 	}
 	return 0;
 }

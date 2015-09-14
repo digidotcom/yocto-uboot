@@ -550,3 +550,22 @@ void v7_outer_cache_disable(void)
 	clrbits_le32(&pl310->pl310_ctrl, L2X0_CTRL_EN);
 }
 #endif /* !CONFIG_SYS_L2CACHE_OFF */
+
+#ifdef CONFIG_ANDROID_RECOVERY
+#define ANDROID_RECOVERY_BOOT  (1 << 7)
+/* check if the recovery bit is set by kernel, it can be set by kernel
+ * issue a command '# reboot recovery' */
+int recovery_check_and_clean_flag(void)
+{
+	int flag_set = 0;
+	u32 reg = readl(SNVS_BASE_ADDR + SNVS_LPGPR);
+
+	flag_set = !!(reg & ANDROID_RECOVERY_BOOT);
+	if (flag_set) {
+		reg &= ~ANDROID_RECOVERY_BOOT;
+		writel(reg, SNVS_BASE_ADDR + SNVS_LPGPR);
+	}
+
+	return flag_set;
+}
+#endif /*CONFIG_ANDROID_RECOVERY*/

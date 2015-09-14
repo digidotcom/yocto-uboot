@@ -2,7 +2,7 @@
 Digi U-Boot RELEASE NOTES
 -------------------------
 
-v2013.04 - DUB-2.3.7.1, released on 2015/09/04
+v2013.04 - DUB-2.3.7.2, released on 2015/09/14
 	- Fixed spurious wake-ups from power-down on certain CC6 variants.
 
 
