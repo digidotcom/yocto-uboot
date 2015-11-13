@@ -132,7 +132,7 @@ struct ccimx6_variant ccimx6_variants[] = {
 		MEM_1GB,
 		CCIMX6_HAS_WIRELESS | CCIMX6_HAS_BLUETOOTH |
 		CCIMX6_HAS_KINETIS | CCIMX6_HAS_EMMC,
-		"Consumer quad-core 1.2GHz, 4GB eMMC, 1GB DDR3, -20/+85C, Wireless, Bluetooth, Kinetis",
+		"Consumer quad-core 1.2GHz, 4GB eMMC, 1GB DDR3, -20/+70C, Wireless, Bluetooth, Kinetis",
 	},
 /* 0x03 - 55001818-03 */
 	{
@@ -248,7 +248,7 @@ struct ccimx6_variant ccimx6_variants[] = {
 		MEM_2GB,
 		CCIMX6_HAS_WIRELESS | CCIMX6_HAS_BLUETOOTH |
 		CCIMX6_HAS_EMMC,
-		"Consumer quad-core 1.2GHz, 4GB eMMC, 2GB DDR3, -20/+85C, Wireless, Bluetooth",
+		"Consumer quad-core 1.2GHz, 4GB eMMC, 2GB DDR3, -20/+70C, Wireless, Bluetooth",
 	},
 };
 
@@ -489,6 +489,25 @@ struct addrvalue ddr3_calibration[NUM_VARIANTS + 1][12] = {
 		/* Write delay */
 		{MX6_MMDC_P0_MPWRDLCTL, 0x3B3A433D},
 		{MX6_MMDC_P1_MPWRDLCTL, 0x4633483E},
+	},
+	/* Variant 0x0E */
+	[0x0E] = {
+		/* Write leveling */
+		{MX6_MMDC_P0_MPWLDECTRL0, 0x0011001B},
+		{MX6_MMDC_P0_MPWLDECTRL1, 0x00370029},
+		{0, 0},
+		{0, 0},
+		/* Read DQS gating */
+		{MX6_MMDC_P0_MPDGCTRL0, 0x4348034A},
+		{MX6_MMDC_P0_MPDGCTRL1, 0x033C033E},
+		{0, 0},
+		{0, 0},
+		/* Read delay */
+		{MX6_MMDC_P0_MPRDDLCTL, 0x3F36383E},
+		{0, 0},
+		/* Write delay */
+		{MX6_MMDC_P0_MPWRDLCTL, 0x3D3C4440},
+		{0, 0},
 	},
 	/* Variant 0x0F (same as variant 0x03) */
 	[0x0F] = {
@@ -1067,6 +1086,32 @@ static int ccimx6_fixup(void)
 	return 0;
 }
 
+void pmic_bucks_synch_mode(void)
+{
+#ifdef CONFIG_I2C_MULTI_BUS
+	if (i2c_set_bus_num(0))
+                return;
+#endif
+
+	i2c_init(CONFIG_SYS_I2C_SPEED, CONFIG_SYS_I2C_SLAVE);
+	if (!i2c_probe(CONFIG_PMIC_I2C_ADDR)) {
+		if (pmic_write_bitfield(DA9063_BCORE2_CONF_ADDR, 0x3, 6, 0x2))
+			printf("Could not set BCORE2 in synchronous mode\n");
+		if (pmic_write_bitfield(DA9063_BCORE1_CONF_ADDR, 0x3, 6, 0x2))
+			printf("Could not set BCORE1 in synchronous mode\n");
+		if (pmic_write_bitfield(DA9063_BPRO_CONF_ADDR, 0x3, 6, 0x2))
+			printf("Could not set BPRO in synchronous mode\n");
+		if (pmic_write_bitfield(DA9063_BIO_CONF_ADDR, 0x3, 6, 0x2))
+			printf("Could not set BIO in synchronous mode\n");
+		if (pmic_write_bitfield(DA9063_BMEM_CONF_ADDR, 0x3, 6, 0x2))
+			printf("Could not set BMEM in synchronous mode\n");
+		if (pmic_write_bitfield(DA9063_BPERI_CONF_ADDR, 0x3, 6, 0x2))
+			printf("Could not set BPERI in synchronous mode\n");
+	} else {
+		printf("Could not set bucks in synchronous mode\n");
+	}
+}
+
 int ccimx6_late_init(void)
 {
 	int ret = 0;
@@ -1091,6 +1136,13 @@ int ccimx6_late_init(void)
 	setup_i2c(2, CONFIG_SYS_I2C_SPEED,
 			CONFIG_SYS_I2C_SLAVE, &i2c_pad_info2);
 #endif
+	/* Operate all PMIC's bucks in "synchronous" mode (PWM) since the
+	 * default "auto" mode may change them to operate in "sleep" mode (PFD)
+	 * which might result in malfunctioning on certain custom boards with
+	 * low loads under extreme stress conditions.
+	 */
+	pmic_bucks_synch_mode();
+
 	ret = setup_pmic_voltages();
 	if (ret)
 		return -1;
