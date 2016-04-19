@@ -442,15 +442,22 @@ static void set_sysctl(struct mmc *mmc, uint clock)
 
 	clk = (pre_div << 8) | (div << 4);
 
+#ifdef CONFIG_FSL_USDHC
+	esdhc_setbits32(&regs->sysctl, SYSCTL_RSTA);
+#else
 	esdhc_clrbits32(&regs->sysctl, SYSCTL_CKEN);
+#endif
 
 	esdhc_clrsetbits32(&regs->sysctl, SYSCTL_CLOCK_MASK, clk);
 
 	udelay(10000);
 
-	clk = SYSCTL_PEREN | SYSCTL_CKEN;
+#ifdef CONFIG_FSL_USDHC
+	esdhc_clrbits32(&regs->sysctl, SYSCTL_RSTA);
+#else
+	esdhc_setbits32(&regs->sysctl, SYSCTL_PEREN | SYSCTL_CKEN);
+#endif
 
-	esdhc_setbits32(&regs->sysctl, clk);
 }
 
 static void esdhc_set_ios(struct mmc *mmc)
@@ -489,7 +496,9 @@ static int esdhc_init(struct mmc *mmc)
 	esdhc_write32(&regs->scr, 0x00000040);
 #endif
 
+#ifndef CONFIG_FSL_USDHC
 	esdhc_write32(&regs->sysctl, SYSCTL_HCKEN | SYSCTL_IPGEN);
+#endif
 
 	/* Set the initial clock speed */
 	mmc_set_clock(mmc, 400000);
@@ -549,8 +558,10 @@ int fsl_esdhc_initialize(bd_t *bis, struct fsl_esdhc_cfg *cfg)
 	/* First reset the eSDHC controller */
 	esdhc_reset(regs);
 
+#ifndef CONFIG_FSL_USDHC
 	esdhc_setbits32(&regs->sysctl, SYSCTL_PEREN | SYSCTL_HCKEN
 				| SYSCTL_IPGEN | SYSCTL_CKEN);
+#endif
 
 	mmc->priv = cfg;
 	mmc->send_cmd = esdhc_send_cmd;
