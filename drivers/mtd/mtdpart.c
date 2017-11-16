@@ -490,3 +490,9 @@ int add_mtd_partitions(struct mtd_info *master,
 
 	return 0;
 }
+
+/* Returns the size of the entire flash chip */
+uint64_t mtd_get_device_size(const struct mtd_info *mtd)
+{
+	return PART(mtd)->master->size;
+}

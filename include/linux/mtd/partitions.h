@@ -81,4 +81,6 @@ int __devinit of_mtd_parse_partitions(struct device *dev,
 				      struct mtd_partition **pparts);
 #endif
 
+uint64_t mtd_get_device_size(const struct mtd_info *mtd);
+
 #endif

@@ -54,11 +54,27 @@ do {									\
 /* compiler options */
 #define uninitialized_var(x)		x = x
 
+#if !defined(CONFIG_MTD_UBI_BEB_LIMIT)
+#define CONFIG_MTD_UBI_BEB_LIMIT	20
+#endif
+
 /* build.c */
 #define get_device(...)
 #define put_device(...)
 #define ubi_sysfs_init(...)		0
 #define ubi_sysfs_close(...)		do { } while (0)
+
+/*
+ * Multiplies an integer by a fraction, while avoiding unnecessary
+ * overflow or loss of precision.
+ */
+#define mult_frac(x, numer, denom)(			\
+{							\
+	typeof(x) quot = (x) / (denom);			\
+	typeof(x) rem  = (x) % (denom);			\
+	(quot * (numer)) + ((rem * (numer)) / (denom));	\
+}							\
+)
 static inline int is_power_of_2(unsigned long n)
 {
 	return (n != 0 && ((n & (n - 1)) == 0));

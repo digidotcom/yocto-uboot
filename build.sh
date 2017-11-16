@@ -3,7 +3,7 @@
 #
 #  build.sh
 #
-#  Copyright (C) 2010 by Digi International Inc.
+#  Copyright (C) 2010-2015 by Digi International Inc.
 #  All rights reserved.
 #
 #  This program is free software; you can redistribute it and/or modify it
@@ -67,16 +67,16 @@ declare -r AVAILABLE_PLATFORMS="
 	wr21
 "
 
-# <platform> <toolchain> <bootstreams>
-while read pl to bs; do
+# <platform> <toolchain> <uboot_make_target>
+while read pl to mt; do
 	eval "${pl}_toolchain=\"${to}\""
-	eval "${pl}_bootstream=\"${bs}\""
+	eval "${pl}_make_target=\"${mt}\""
 done<<-_EOF_
-        ccardimx28js    arm-unknown-linux-gnueabi       y
-        ccimx51js       arm-cortex_a8-linux-gnueabi     n
-        ccimx53js       arm-cortex_a8-linux-gnueabi     n
-        cpx2            arm-unknown-linux-gnueabi       y
-        wr21            arm-unknown-linux-gnueabi       y
+        ccardimx28js    arm-unknown-linux-gnueabi       u-boot-ivt.sb
+        ccimx51js       arm-cortex_a8-linux-gnueabi     u-boot.bin
+        ccimx53js       arm-cortex_a8-linux-gnueabi     u-boot.bin
+        cpx2            arm-unknown-linux-gnueabi       u-boot-ivt.sb
+        wr21            arm-unknown-linux-gnueabi       u-boot-ivt.sb
 _EOF_
 
 while getopts "i:" c; do
@@ -128,7 +128,7 @@ CPUS="$(echo /sys/devices/system/cpu/cpu[0-9]* | wc -w)"
 
 for platform; do
 	eval _toolchain_str=\"\${${platform%%_*}_toolchain}\"
-	eval _has_bootstreams=\"\${${platform%%_*}_bootstream}\"
+	eval _uboot_make_target=\"\${${platform%%_*}_make_target}\"
 	export PATH="${toolchain_dir}/x-tools/${_toolchain_str}/bin:${OLDPATH}"
 
 	printf "\n[PLATFORM: ${platform} - PATH: ${PATH}]\n"
@@ -137,11 +137,7 @@ for platform; do
 	make "${platform}_config"
 	make ${MAKE_JOBS}
 	if [ -d "${install_dir}" ]; then
-		cp "u-boot-${platform}.bin" "${install_dir}/"
+		cp ${_uboot_make_target} "${install_dir}/${_uboot_make_target/u-boot/u-boot-${platform}}"
 		cp System.map "${install_dir}/u-boot-${platform}.map"
-		if [ "${_has_bootstreams}" = "y" ]; then
-			cp "u-boot-${platform}.sb" "${install_dir}/"
-			cp "u-boot-${platform}-ivt.sb" "${install_dir}/"
-		fi
 	fi
 done
