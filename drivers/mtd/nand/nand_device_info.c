@@ -23,6 +23,44 @@ static struct nand_device_info nand_device_info_table_type_2[] =
 {
 	{
 	.end_of_table             = false,
+	.manufacturer_code        = 0x01,
+	.device_code              = 0xa1,
+	.cell_technology          = NAND_DEVICE_CELL_TECH_SLC,
+	.chip_size_in_bytes       = 128LL*SZ_1M,
+	.block_size_in_pages      = 64,
+	.page_total_size_in_bytes = 2*SZ_1K + 64,
+	.ecc_strength_in_bits     = 4,
+	.ecc_size_in_bytes        = 512,
+	.data_setup_in_ns         = 25,
+	.data_hold_in_ns          = 15,
+	.address_setup_in_ns      = 35,
+	.gpmi_sample_delay_in_ns  = 10,
+	.tREA_in_ns               = 30,
+	.tRLOH_in_ns              = -1,
+	.tRHOH_in_ns              = 15,
+	"S34MS01G2",
+	},
+	{
+	.end_of_table             = false,
+	.manufacturer_code        = 0xc8,
+	.device_code              = 0x81,
+	.cell_technology          = NAND_DEVICE_CELL_TECH_SLC,
+	.chip_size_in_bytes       = 128LL*SZ_1M,
+	.block_size_in_pages      = 64,
+	.page_total_size_in_bytes = 2*SZ_1K + 64,
+	.ecc_strength_in_bits     = 4,
+	.ecc_size_in_bytes        = 512,
+	.data_setup_in_ns         = 25,
+	.data_hold_in_ns          = 15,
+	.address_setup_in_ns      = 35,
+	.gpmi_sample_delay_in_ns  = 10,
+	.tREA_in_ns               = 30,
+	.tRLOH_in_ns              = 5,
+	.tRHOH_in_ns              = 15,
+	"IS34MW01G084",
+	},
+	{
+	.end_of_table             = false,
 	.manufacturer_code        = 0x20,
 	.device_code              = 0xf1,
 	.cell_technology          = NAND_DEVICE_CELL_TECH_SLC,
@@ -963,6 +1001,25 @@ static struct nand_device_info nand_device_info_table_large_mlc[] =
  */
 static struct nand_device_info nand_device_info_table_type_7[] =
 {
+	{
+	.end_of_table             = false,
+	.manufacturer_code        = 0x01,
+	.device_code              = 0xa1,
+	.cell_technology          = NAND_DEVICE_CELL_TECH_SLC,
+	.chip_size_in_bytes       = 128LL*SZ_1M,
+	.block_size_in_pages      = 64,
+	.page_total_size_in_bytes = 2*SZ_1K + 64,
+	.ecc_strength_in_bits     = 1,
+	.ecc_size_in_bytes        = 512,
+	.data_setup_in_ns         = 25,
+	.data_hold_in_ns          = 15,
+	.address_setup_in_ns      = 35,
+	.gpmi_sample_delay_in_ns  = 10,
+	.tREA_in_ns               = 30,
+	.tRLOH_in_ns              = -1,
+	.tRHOH_in_ns              = 15,
+	"S34MS01G1",
+	},
 	{
 	.end_of_table             = false,
 	.manufacturer_code        = 0x2c,
@@ -2200,6 +2257,20 @@ static struct nand_device_info *nand_device_info_fn_micron(const uint8_t id[])
 
 }
 
+
+static struct nand_device_info *nand_device_info_fn_amd(const uint8_t id[])
+{
+	struct nand_device_info  *table;
+
+	if (ID_GET_CACHE_PROGRAM(id))
+		table = nand_device_info_table_type_2;
+	else
+		table = nand_device_info_table_type_7;
+
+	return nand_device_info_search(table, ID_GET_MFR_CODE(id),
+							ID_GET_DEVICE_CODE(id));
+}
+
 static struct nand_device_info *nand_device_info_fn_sandisk(const uint8_t id[])
 {
 	struct nand_device_info  *table;
@@ -2240,6 +2311,12 @@ static struct nand_device_info *nand_device_info_fn_intel(const uint8_t id[])
 	return nand_device_info_search(table, ID_GET_MFR_CODE(id),
 							ID_GET_DEVICE_CODE(id));
 
+}
+
+static struct nand_device_info *nand_device_info_fn_issi(const uint8_t id[])
+{
+	return nand_device_info_search(nand_device_info_table_type_2, ID_GET_MFR_CODE(id),
+							ID_GET_DEVICE_CODE(id));
 }
 
 /**
@@ -2326,7 +2403,7 @@ static struct nand_device_mfr_info  nand_device_mfr_directory[] =
 	},
 	{
 	.id = NAND_MFR_AMD,
-	.fn = 0,
+	.fn = nand_device_info_fn_amd,
 	},
 	{
 	.id = NAND_MFR_SANDISK,
@@ -2335,6 +2412,10 @@ static struct nand_device_mfr_info  nand_device_mfr_directory[] =
 	{
 	.id = NAND_MFR_INTEL,
 	.fn = nand_device_info_fn_intel,
+	},
+	{
+	.id = NAND_MFR_ISSI,
+	.fn = nand_device_info_fn_issi,
 	},
 	{0, 0}
 };

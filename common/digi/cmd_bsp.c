@@ -67,7 +67,8 @@
 #define LPJ     "lpj"
 
 /* Constants for bootscript download timeouts */
-#define AUTOSCRIPT_TFTP_CNT	3
+#define AUTOSCRIPT_TFTP_MSEC	1000
+#define AUTOSCRIPT_TFTP_CNT	1
 #define AUTOSCRIPT_START_AGAIN	100
 
 /* from cmd_bootm */
@@ -213,6 +214,7 @@ extern void *zalloc(void *x, unsigned items, unsigned size);
 extern void zfree(void *x, void *addr, unsigned nb);
 
 extern int NetSilent;		/* Whether to silence the net commands output */
+extern ulong TftpRRQTimeoutMSecs;
 extern int TftpRRQTimeoutCountMax;
 extern unsigned long NetStartAgainTimeout;
 int DownloadingAutoScript = 0;
@@ -2849,6 +2851,7 @@ void run_auto_script(void)
 	char szCmd[ PATH_MAXLEN ]  = "";
 	char *s, *bootscript;
 	/* Save original timeouts */
+        ulong saved_rrqtimeout_msecs = TftpRRQTimeoutMSecs;
         int saved_rrqtimeout_count = TftpRRQTimeoutCountMax;
 	ulong saved_startagain_timeout = NetStartAgainTimeout;
 
@@ -2860,6 +2863,7 @@ void run_auto_script(void)
 		printf("Autoscript from TFTP... ");
 
 		/* set timeouts for bootscript */
+		TftpRRQTimeoutMSecs = AUTOSCRIPT_TFTP_MSEC;
 		TftpRRQTimeoutCountMax = AUTOSCRIPT_TFTP_CNT;
 		NetStartAgainTimeout = AUTOSCRIPT_START_AGAIN;
 
@@ -2873,6 +2877,7 @@ void run_auto_script(void)
 		NetSilent = 0;
 		DownloadingAutoScript = 0;
 		/* Restore original timeouts */
+		TftpRRQTimeoutMSecs = saved_rrqtimeout_msecs;
 		TftpRRQTimeoutCountMax = saved_rrqtimeout_count;
 		NetStartAgainTimeout = saved_startagain_timeout;
 

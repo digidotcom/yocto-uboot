@@ -2,10 +2,15 @@
 U-Boot RELEASE NOTES
 --------------------
 
-v2009.08 - DUB-1.6.6.1, released on 2017/10/03
+v2009.08 - DUB-1.6.7.1, released on 2018/04/19
+	- mtd: nand: add support for the following NAND flash chips:
+		- Cypress/Spansion S34MS01G1, S34MS01G2
+		- ISSI IS34MW01G084
+
+v2009.08 - DUB-1.6.6.2, released on 2018/03/05
 	- tftp: modified auto bootscript timeout parameters
 	- ccardimx28: updated the algorithm for UBI bad block calculation
-	- ccardimx28: fixed a bug that was causing correctedbitflips to go
+	- ccardimx28: fixed a bug that was causing corrected bitflips to go
 	  unnoticed
 
 v2009.08 - DUB-1.6.5.2, released on 2015/02/23
