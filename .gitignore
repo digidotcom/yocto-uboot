@@ -41,6 +41,7 @@
 /u-boot.ais
 /u-boot.dtb
 /u-boot.sb
+/u-boot.bd
 /u-boot.geany
 /include/u-boot.lst
 /u-boot.nand

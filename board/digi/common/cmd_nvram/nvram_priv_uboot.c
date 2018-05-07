@@ -17,15 +17,18 @@
 
 #include <common.h>
 
+#ifdef CONFIG_CMD_NAND
+# include <nand.h>
+#endif  /* CONFIG_CMD_NAND */
+
 #include "nvram_priv.h"
 #include "env.h"
 #include "mtd.h"
 #include "partition.h"
 
-size_t uboot_part_size = PART_UBOOT_SIZE;
 extern uint8_t modified_parts[NV_MAX_PARTITIONS];
 
-#define OFFS( x ) ( uboot_part_size + ( x ) )
+#define OFFS(x) (get_uboot_part_size() + (x))
 
 #define CE( sCmd ) \
         do { \
@@ -198,7 +201,7 @@ int NvPrivOSCriticalPartReset(
 	axPartitionTable[part].eType = NVPT_BOOTSTREAM;
 	axPartitionTable[part].flags.bFixed = 1;
 	axPartitionTable[part].ullStart = 0;
-	axPartitionTable[part].ullSize = PART_UBOOT_SIZE;
+	axPartitionTable[part].ullSize = get_uboot_part_size();
 #else
 	/* U-Boot */
 	part = 0;
@@ -206,7 +209,7 @@ int NvPrivOSCriticalPartReset(
 	axPartitionTable[part].eType = NVPT_UBOOT;
 	axPartitionTable[part].flags.bFixed = 1;
 	axPartitionTable[part].ullStart = 0;
-	axPartitionTable[part].ullSize = uboot_part_size;
+	axPartitionTable[part].ullSize = get_uboot_part_size();
 #endif
 	modified_parts[part] = 1;
 	/* NVRAM */

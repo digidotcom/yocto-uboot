@@ -318,6 +318,7 @@ struct ubi_wl_entry;
  * @flash_size: underlying MTD device size (in bytes)
  * @peb_count: count of physical eraseblocks on the MTD device
  * @peb_size: physical eraseblock size
+ * @bad_peb_limit: top limit of expected bad physical eraseblocks
  * @bad_peb_count: count of bad physical eraseblocks
  * @good_peb_count: count of good physical eraseblocks
  * @min_io_size: minimal input/output unit size of the underlying MTD device
@@ -357,6 +358,7 @@ struct ubi_device {
 	int avail_pebs;
 	int beb_rsvd_pebs;
 	int beb_rsvd_level;
+	int bad_peb_limit;
 
 	int autoresize_vol_id;
 	int vtbl_slots;
@@ -523,7 +525,8 @@ int ubi_io_write_vid_hdr(struct ubi_device *ubi, int pnum,
 			 struct ubi_vid_hdr *vid_hdr);
 
 /* build.c */
-int ubi_attach_mtd_dev(struct mtd_info *mtd, int ubi_num, int vid_hdr_offset);
+int ubi_attach_mtd_dev(struct mtd_info *mtd, int ubi_num,
+				 int vid_hdr_offset, int max_beb_per1024);
 int ubi_detach_mtd_dev(int ubi_num, int anyway);
 struct ubi_device *ubi_get_device(int ubi_num);
 void ubi_put_device(struct ubi_device *ubi);

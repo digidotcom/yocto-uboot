@@ -378,44 +378,25 @@ static void mxs_power_init_4p2_regulator(void)
 	}
 
 	/*
-	 * Here we set the 4p2 brownout level to something very close to 4.2V.
-	 * We then check the brownout status. If the brownout status is false,
-	 * the voltage is already close to the target voltage of 4.2V so we
-	 * can go ahead and set the 4P2 current limit to our max target limit.
-	 * If the brownout status is true, we need to ramp us the current limit
-	 * so that we don't cause large inrush current issues. We step up the
-	 * current limit until the brownout status is false or until we've
-	 * reached our maximum defined 4p2 current limit.
+	 * As per AN4199, always ramp-up the 4p2 linear regulator in
+	 * the smallest increments and delay at least 10 usec on every
+	 * step, to make sure the capacitors are fully loaded and avoid
+	 * an in-rush current.
 	 */
 	clrsetbits_le32(&power_regs->hw_power_dcdc4p2,
 			POWER_DCDC4P2_BO_MASK,
 			22 << POWER_DCDC4P2_BO_OFFSET);	/* 4.15V */
 
-	if (!(readl(&power_regs->hw_power_sts) & POWER_STS_DCDC_4P2_BO)) {
-		setbits_le32(&power_regs->hw_power_5vctrl,
-			0x3f << POWER_5VCTRL_CHARGE_4P2_ILIMIT_OFFSET);
-	} else {
-		tmp = (readl(&power_regs->hw_power_5vctrl) &
-			POWER_5VCTRL_CHARGE_4P2_ILIMIT_MASK) >>
-			POWER_5VCTRL_CHARGE_4P2_ILIMIT_OFFSET;
-		while (tmp < 0x3f) {
-			if (!(readl(&power_regs->hw_power_sts) &
-					POWER_STS_DCDC_4P2_BO)) {
-				tmp = readl(&power_regs->hw_power_5vctrl);
-				tmp |= POWER_5VCTRL_CHARGE_4P2_ILIMIT_MASK;
-				early_delay(100);
-				writel(tmp, &power_regs->hw_power_5vctrl);
-				break;
-			} else {
-				tmp++;
-				tmp2 = readl(&power_regs->hw_power_5vctrl);
-				tmp2 &= ~POWER_5VCTRL_CHARGE_4P2_ILIMIT_MASK;
-				tmp2 |= tmp <<
-					POWER_5VCTRL_CHARGE_4P2_ILIMIT_OFFSET;
-				writel(tmp2, &power_regs->hw_power_5vctrl);
-				early_delay(100);
-			}
-		}
+	tmp = (readl(&power_regs->hw_power_5vctrl) &
+		POWER_5VCTRL_CHARGE_4P2_ILIMIT_MASK) >>
+		POWER_5VCTRL_CHARGE_4P2_ILIMIT_OFFSET;
+	while (tmp < 0x3f) {
+		tmp++;
+		tmp2 = readl(&power_regs->hw_power_5vctrl);
+		tmp2 &= ~POWER_5VCTRL_CHARGE_4P2_ILIMIT_MASK;
+		tmp2 |= tmp << POWER_5VCTRL_CHARGE_4P2_ILIMIT_OFFSET;
+		writel(tmp2, &power_regs->hw_power_5vctrl);
+		early_delay(100);
 	}
 
 	clrbits_le32(&power_regs->hw_power_dcdc4p2, POWER_DCDC4P2_BO_MASK);

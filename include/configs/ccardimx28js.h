@@ -192,6 +192,7 @@
 /*
  * NAND Driver
  */
+#define CONFIG_SYS_NAND_ONFI_DETECTION
 #define CONFIG_CMD_NAND
 #ifdef CONFIG_CMD_NAND
 #define CONFIG_NAND_MXS
@@ -200,6 +201,7 @@
 #define CONFIG_SYS_NAND_5_ADDR_CYCLE
 #define PART_NVRAM_SIZE        	0x00040000	/* nvram 256 kb because 2k pagesize nands */
 #define PART_UBOOT_SIZE	       	0x00300000	/* 3 MB */
+#define PART_UBOOT_SIZE_4KPAGE  0x00600000	/* 6 MB for 4K page flashes */
 #define PART_KERNEL_SIZE       	0x00500000	/* 5 MB */
 #define PART_FDT_SIZE       	0x00080000	/* 512 KiB */
 #define PART_ROOTFS_SIZE       	0x07300000	/* 115 MB */

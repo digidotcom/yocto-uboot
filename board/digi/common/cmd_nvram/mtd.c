@@ -18,6 +18,7 @@
 
 #include "mtd.h"
 #include "nvram_types.h"        /* CLEAR */
+#include <errno.h>
 
 #ifdef CONFIG_CMD_NAND
 # define HAVE_NAND
@@ -46,7 +47,16 @@ int MtdRead( int iChip, uint64_t ullOffs, size_t iLength, void* pvBuf )
         nand_info_t* pChip = &nand_info[ iChip ];
         size_t iRetBlock;
 
-        iRes = !pChip->read( pChip, ullOffs, iLength, &iRetBlock, pvBuf );
+        iRes = pChip->read( pChip, ullOffs, iLength, &iRetBlock, pvBuf );
+
+        /**
+         * If nand_do_read_ops returns -EUCLEAN, a bitflip has been detected
+         * and corrected with the ECC algorithm.
+         */
+        if ( iRes == -EUCLEAN )
+                iRes = 1;
+        else
+                iRes = !iRes;
 #else
         flash_info_t* pChip = &flash_info[ iChip ];
         memcpy( pvBuf, ((const char*) pChip->start[ 0 ] ) + ullOffs, iLength );

@@ -60,8 +60,8 @@
 #define LPJ     "lpj"
 
 /* Constants for bootscript download timeouts */
-#define AUTOSCRIPT_TFTP_MSEC	100
-#define AUTOSCRIPT_TFTP_CNT	15
+#define AUTOSCRIPT_TFTP_MSEC	1000
+#define AUTOSCRIPT_TFTP_CNT	1
 #define AUTOSCRIPT_START_AGAIN	100
 
 /* from cmd_bootm */

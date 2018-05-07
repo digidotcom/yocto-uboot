@@ -180,7 +180,7 @@ int v1_rom_mtd_init(struct mtd_info *mtd,
 		fcb->FCB_Block.m_u32MetadataBytes            = 10;
 		fcb->FCB_Block.m_u32EccBlock0Size            = 512;
 		fcb->FCB_Block.m_u32EccBlockNSize            = 512;
-		if (mtd->oobsize == 218) {
+		if (mtd->oobsize == 218 || mtd->oobsize == 224) {
 			fcb->FCB_Block.m_u32EccBlock0EccType = ROM_BCH_Ecc_16bit;
 			fcb->FCB_Block.m_u32EccBlockNEccType = ROM_BCH_Ecc_16bit;
 		} else if ((mtd->oobsize == 128)){

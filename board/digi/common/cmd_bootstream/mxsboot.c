@@ -24,6 +24,7 @@
  */
 
 #include <common.h>
+#include <nand.h>
 
 /*
  * Default BCB layout.
@@ -32,16 +33,6 @@
  */
 #define	STRIDE_PAGES		64
 #define	STRIDE_COUNT		4
-
-/*
- * Layout for 256Mb big NAND with 2048b page size, 64b OOB size and
- * 128kb erase size.
- *
- * TWEAK this if you have different kind of NAND chip.
- */
-uint32_t nand_writesize = 2048;
-uint32_t nand_oobsize = 64;
-uint32_t nand_erasesize = 128 * 1024;
 
 /*
  * Sector on which the SigmaTel boot partition (0x53) starts.
@@ -151,7 +142,7 @@ static inline uint32_t mx28_nand_get_ecc_strength(uint32_t page_data_size,
 		if (page_oob_size == 128)
 			return 8;
 
-		if (page_oob_size == 218)
+		if (page_oob_size == 218 || page_oob_size == 224)
 			return 16;
 	}
 
@@ -210,15 +201,19 @@ static inline uint32_t mx28_nand_get_mark_offset(uint32_t page_data_size,
 inline uint32_t mx28_nand_mark_byte_offset(void)
 {
 	uint32_t ecc_strength;
-	ecc_strength = mx28_nand_get_ecc_strength(nand_writesize, nand_oobsize);
-	return mx28_nand_get_mark_offset(nand_writesize, ecc_strength) >> 3;
+	struct mtd_info *mtd = &nand_info[0];
+
+	ecc_strength = mx28_nand_get_ecc_strength(mtd->writesize, mtd->oobsize);
+	return mx28_nand_get_mark_offset(mtd->writesize, ecc_strength) >> 3;
 }
 
 inline uint32_t mx28_nand_mark_bit_offset(void)
 {
 	uint32_t ecc_strength;
-	ecc_strength = mx28_nand_get_ecc_strength(nand_writesize, nand_oobsize);
-	return mx28_nand_get_mark_offset(nand_writesize, ecc_strength) & 0x7;
+	struct mtd_info *mtd = &nand_info[0];
+
+	ecc_strength = mx28_nand_get_ecc_strength(mtd->writesize, mtd->oobsize);
+	return mx28_nand_get_mark_offset(mtd->writesize, ecc_strength) & 0x7;
 }
 
 #if 0
@@ -241,14 +236,15 @@ static struct mx28_nand_fcb *mx28_nand_get_fcb(uint32_t size)
 	uint32_t bootstream_size_pages;
 	uint32_t fw1_start_page;
 	uint32_t fw2_start_page;
+	struct mtd_info *mtd = &nand_info[0];
 
-	fcb = malloc(nand_writesize);
+	fcb = malloc(mtd->writesize);
 	if (!fcb) {
 		printf("MX28 NAND: Unable to allocate FCB\n");
 		return NULL;
 	}
 
-	memset(fcb, 0, nand_writesize);
+	memset(fcb, 0, mtd->writesize);
 
 	fcb->fingerprint =			0x20424346;
 	fcb->version =				0x01000000;
@@ -262,23 +258,23 @@ static struct mx28_nand_fcb *mx28_nand_get_fcb(uint32_t size)
 	fcb->timing.address_setup =		25;
 	fcb->timing.dsample_time =		6;
 
-	fcb->page_data_size =		nand_writesize;
-	fcb->total_page_size =		nand_writesize + nand_oobsize;
-	fcb->sectors_per_block =	nand_erasesize / nand_writesize;
+	fcb->page_data_size =		mtd->writesize;
+	fcb->total_page_size =		mtd->writesize + mtd->oobsize;
+	fcb->sectors_per_block =	mtd->erasesize / mtd->writesize;
 
-	fcb->num_ecc_blocks_per_page =	(nand_writesize / 512) - 1;
+	fcb->num_ecc_blocks_per_page =	(mtd->writesize / 512) - 1;
 	fcb->ecc_block_0_size =		512;
 	fcb->ecc_block_n_size =		512;
 	fcb->metadata_bytes =		10;
 
-	if (nand_writesize == 2048) {
+	if (mtd->writesize == 2048) {
 		fcb->ecc_block_n_ecc_type =		4;
 		fcb->ecc_block_0_ecc_type =		4;
-	} else if (nand_writesize == 4096) {
-		if (nand_oobsize == 128) {
+	} else if (mtd->writesize == 4096) {
+		if (mtd->oobsize == 128) {
 			fcb->ecc_block_n_ecc_type =	4;
 			fcb->ecc_block_0_ecc_type =	4;
-		} else if (nand_oobsize == 218) {
+		} else if (mtd->oobsize == 218 || mtd->oobsize == 224) {
 			fcb->ecc_block_n_ecc_type =	8;
 			fcb->ecc_block_0_ecc_type =	8;
 		}
@@ -294,17 +290,17 @@ static struct mx28_nand_fcb *mx28_nand_get_fcb(uint32_t size)
 
 	fcb->badblock_marker_byte =	mx28_nand_mark_byte_offset();
 	fcb->badblock_marker_start_bit = mx28_nand_mark_bit_offset();
-	fcb->bb_marker_physical_offset = nand_writesize;
+	fcb->bb_marker_physical_offset = mtd->writesize;
 
-	stride_size_bytes = STRIDE_PAGES * nand_writesize;
+	stride_size_bytes = STRIDE_PAGES * mtd->writesize;
 	bcb_size_bytes = stride_size_bytes * STRIDE_COUNT;
 
-	bootstream_size_pages = (size + (nand_writesize - 1)) /
-					nand_writesize;
+	bootstream_size_pages = (size + (mtd->writesize - 1)) /
+					mtd->writesize;
 
-	fw1_start_page = 2 * bcb_size_bytes / nand_writesize;
+	fw1_start_page = 2 * bcb_size_bytes / mtd->writesize;
 	fw2_start_page = (2 * bcb_size_bytes + MAX_BOOTSTREAM_SIZE) /
-				nand_writesize;
+				mtd->writesize;
 
 	fcb->firmware1_starting_sector =	fw1_start_page;
 	fcb->firmware2_starting_sector =	fw2_start_page;
@@ -324,13 +320,13 @@ static struct mx28_nand_dbbt *mx28_nand_get_dbbt(void)
 {
 	struct mx28_nand_dbbt *dbbt;
 
-	dbbt = malloc(nand_writesize);
+	dbbt = malloc(mtd->writesize);
 	if (!dbbt) {
 		printf("MX28 NAND: Unable to allocate DBBT\n");
 		return NULL;
 	}
 
-	memset(dbbt, 0, nand_writesize);
+	memset(dbbt, 0, mtd->writesize);
 
 	dbbt->fingerprint	= 0x54424244;
 	dbbt->version		= 0x1;
@@ -366,14 +362,15 @@ static uint8_t *mx28_nand_fcb_block(struct mx28_nand_fcb *fcb)
 	uint8_t *block;
 	uint8_t *ecc;
 	int i;
+	struct mtd_info *mtd = &nand_info[0];
 
-	block = malloc(nand_writesize + nand_oobsize);
+	block = malloc(mtd->writesize + mtd->oobsize);
 	if (!block) {
 		printf("MX28 NAND: Unable to allocate FCB block\n");
 		return NULL;
 	}
 
-	memset(block, 0, nand_writesize + nand_oobsize);
+	memset(block, 0, mtd->writesize + mtd->oobsize);
 
 	/* Update the FCB checksum */
 	fcb->checksum = mx28_nand_block_csum(((uint8_t *)fcb) + 4, 508);
@@ -403,8 +400,8 @@ static int mx28_nand_write_fcb(struct mx28_nand_fcb *fcb, char *buf)
 		return -1;
 
 	for (i = 0; i < STRIDE_PAGES * STRIDE_COUNT; i += STRIDE_PAGES) {
-		offset = i * nand_writesize;
-		memcpy(buf + offset, fcbblock, nand_writesize + nand_oobsize);
+		offset = i * mtd->writesize;
+		memcpy(buf + offset, fcbblock, mtd->writesize + mtd->oobsize);
 	}
 
 	free(fcbblock);
@@ -415,9 +412,10 @@ static int mx28_nand_write_dbbt(struct mx28_nand_dbbt *dbbt, char *buf)
 {
 	uint32_t offset;
 	int i = STRIDE_PAGES * STRIDE_COUNT;
+	struct mtd_info *mtd = &nand_info[0];
 
 	for (; i < 2 * STRIDE_PAGES * STRIDE_COUNT; i += STRIDE_PAGES) {
-		offset = i * nand_writesize;
+		offset = i * mtd->writesize;
 		memcpy(buf + offset, dbbt, sizeof(struct mx28_nand_dbbt));
 	}
 
@@ -430,12 +428,13 @@ static int mx28_nand_write_firmware(struct mx28_nand_fcb *fcb, int infd,
 	int ret;
 	off_t size;
 	uint32_t offset1, offset2;
+	struct mtd_info *mtd = &nand_info[0];
 
 	size = lseek(infd, 0, SEEK_END);
 	lseek(infd, 0, SEEK_SET);
 
-	offset1 = fcb->firmware1_starting_sector * nand_writesize;
-	offset2 = fcb->firmware2_starting_sector * nand_writesize;
+	offset1 = fcb->firmware1_starting_sector * mtd->writesize;
+	offset2 = fcb->firmware2_starting_sector * mtd->writesize;
 
 	ret = read(infd, buf + offset1, size);
 	if (ret != size)
@@ -477,8 +476,9 @@ static int mx28_create_nand_image(int infd, int outfd)
 	char *buf;
 	int size;
 	ssize_t wr_size;
+	struct mtd_info *mtd = &nand_info[0];
 
-	size = nand_writesize * 512 + 2 * MAX_BOOTSTREAM_SIZE;
+	size = mtd->writesize * 512 + 2 * MAX_BOOTSTREAM_SIZE;
 
 	buf = malloc(size);
 	if (!buf) {
@@ -648,7 +648,7 @@ int main(int argc, char **argv)
 	int ret = 0;
 	int offset;
 
-	offset = parse_ops(argc, argv);
+	offset = mtd->writesize(argc, argv);
 	if (offset < 0) {
 		usage();
 		ret = 1;

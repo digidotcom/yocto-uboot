@@ -201,14 +201,14 @@ void env_relocate(void)
 {
 #if defined(CONFIG_CMD_NAND) && defined(CONFIG_CMD_BSP)
 	/* Dynamic calculation of NVRAM partition size. */
-	nvram_part_size = MtdGetEraseSize(0, PART_UBOOT_SIZE);
+	nvram_part_size = MtdGetEraseSize(0, get_uboot_part_size());
 	while (nvram_part_size < CONFIG_ENV_SIZE)
-		nvram_part_size += MtdGetEraseSize(0, PART_UBOOT_SIZE + nvram_part_size);
+		nvram_part_size += MtdGetEraseSize(0, get_uboot_part_size() + nvram_part_size);
 
 	/* space for NVRAM backup */
-	nvram_part_size += MtdGetEraseSize(0, PART_UBOOT_SIZE + nvram_part_size);
+	nvram_part_size += MtdGetEraseSize(0, get_uboot_part_size() + nvram_part_size);
 	while (nvram_part_size < 2 * CONFIG_ENV_SIZE)
-		nvram_part_size += MtdGetEraseSize(0, PART_UBOOT_SIZE + nvram_part_size);
+		nvram_part_size += MtdGetEraseSize(0, get_uboot_part_size() + nvram_part_size);
 
 	/* double NVRAM partition size to handle bad blcoks */
 	nvram_part_size += nvram_part_size;

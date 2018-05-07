@@ -2,6 +2,15 @@
 U-Boot RELEASE NOTES
 --------------------
 
+v2013.01 - DUB-2.0.3.1, released on 2018/05/07
+        - mtd: nand: add support for the following NAND flash chips:
+            - Cypress/Spansion S34MS01G1, S34MS01G2
+            - ISSI IS34MW01G084
+        - tftp: modified auto bootscript timeout parameters
+        - ccardimx28: updated the algorithm for UBI bad block calculation
+        - ccardimx28: fixed a bug that was causing corrected bitflips to go
+          unnoticed
+
 v2013.01 - DUB-2.0.2.1, released on 2015/02/12
         - Added support for ccardimx28js variants 0x0e..0x12
         - Adjust DRAM timings to be compatible with different
