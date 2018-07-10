@@ -145,6 +145,7 @@ int variant_machid(void)
 	case 0x15:
 	case 0x17:
 	case 0x19:
+	case 0x1c:
 		/* Non-wireless variants */
 		return MACH_TYPE_CCMX51JS;
 	default:

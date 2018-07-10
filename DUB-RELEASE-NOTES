@@ -2,6 +2,18 @@
 U-Boot RELEASE NOTES
 --------------------
 
+v2009.08 - DUB-1.6.8.4, released on 2021/11/01
+	- ccardimx28: add variants 0x13 (55001671-10) and 0x14 (55001671-11)
+
+v2009.08 - DUB-1.6.8.3, released on 2019/07/15
+	- mtd: nand: add support for ISSI IS34ML04G081 NAND flash chip
+
+v2009.08 - DUB-1.6.8.2, released on 2018/08/21
+	- ccimx51: add variant 0x1c (55001585-13)
+
+v2009.08 - DUB-1.6.8.1, released on 2018/07/11
+	- mtd: nand: add support for ATO AFND1G08U3 NAND flash chip
+
 v2009.08 - DUB-1.6.7.1, released on 2018/04/19
 	- mtd: nand: add support for the following NAND flash chips:
 		- Cypress/Spansion S34MS01G1, S34MS01G2

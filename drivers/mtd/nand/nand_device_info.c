@@ -23,6 +23,25 @@ static struct nand_device_info nand_device_info_table_type_2[] =
 {
 	{
 	.end_of_table             = false,
+	.manufacturer_code        = 0x9b,
+	.device_code              = 0xf1,
+	.cell_technology          = NAND_DEVICE_CELL_TECH_SLC,
+	.chip_size_in_bytes       = 128LL*SZ_1M,
+	.block_size_in_pages      = 64,
+	.page_total_size_in_bytes = 2*SZ_1K + 64,
+	.ecc_strength_in_bits     = 4,
+	.ecc_size_in_bytes        = 512,
+	.data_setup_in_ns         = 35,
+	.data_hold_in_ns          = 25,
+	.address_setup_in_ns      = 0,
+	.gpmi_sample_delay_in_ns  = 6,
+	.tREA_in_ns               = -1,
+	.tRLOH_in_ns              = -1,
+	.tRHOH_in_ns              = -1,
+	"AFND1G08U3",
+	},
+	{
+	.end_of_table             = false,
 	.manufacturer_code        = 0x01,
 	.device_code              = 0xa1,
 	.cell_technology          = NAND_DEVICE_CELL_TECH_SLC,
@@ -419,6 +438,25 @@ static struct nand_device_info nand_device_info_table_type_2[] =
 	.tRLOH_in_ns              = -1,
 	.tRHOH_in_ns              = -1,
 	NULL,
+	},
+	{
+	.end_of_table             = false,
+	.manufacturer_code        = 0xc8,
+	.device_code              = 0xdc,
+	.cell_technology          = NAND_DEVICE_CELL_TECH_SLC,
+	.chip_size_in_bytes       = 512LL*SZ_1M,
+	.block_size_in_pages      = 64,
+	.page_total_size_in_bytes = 2*SZ_1K + 64,
+	.ecc_strength_in_bits     = 1,
+	.ecc_size_in_bytes        = 512,
+	.data_setup_in_ns         = 12,
+	.data_hold_in_ns          = 5,
+	.address_setup_in_ns      = 12,
+	.gpmi_sample_delay_in_ns  = 10,
+	.tREA_in_ns               = 20,
+	.tRLOH_in_ns              = 5,
+	.tRHOH_in_ns              = 15,
+	"IS34ML04G081",
 	},
 	{
 	.end_of_table             = false,
@@ -2319,6 +2357,12 @@ static struct nand_device_info *nand_device_info_fn_issi(const uint8_t id[])
 							ID_GET_DEVICE_CODE(id));
 }
 
+static struct nand_device_info *nand_device_info_fn_ato(const uint8_t id[])
+{
+	return nand_device_info_search(nand_device_info_table_type_2, ID_GET_MFR_CODE(id),
+							ID_GET_DEVICE_CODE(id));
+}
+
 /**
  * struct nand_device_type_info - Information about a NAND Flash type.
  *
@@ -2416,6 +2460,10 @@ static struct nand_device_mfr_info  nand_device_mfr_directory[] =
 	{
 	.id = NAND_MFR_ISSI,
 	.fn = nand_device_info_fn_issi,
+	},
+	{
+	.id = NAND_MFR_ATO,
+	.fn = nand_device_info_fn_ato,
 	},
 	{0, 0}
 };

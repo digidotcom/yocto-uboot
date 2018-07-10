@@ -266,6 +266,8 @@ int variant_machid(void)
 	case 0x0c:
 	case 0x0d:
 	case 0x0e:
+	case 0x13:
+	case 0x14:
 		/* Non-wireless variants */
 		return MACH_TYPE_CCARDMX28JS;
 	default:
