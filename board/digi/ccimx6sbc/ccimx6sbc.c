@@ -198,12 +198,6 @@ int board_mmc_getcd(struct mmc *mmc)
 int board_early_init_f(void)
 {
 	setup_iomux_uart();
-	ccimx6_early_init();
-
-#ifdef CONFIG_CMD_SATA
-	setup_sata();
-#endif
-	setup_board_audio();
 
 	return 0;
 }
@@ -213,8 +207,11 @@ int board_init(void)
 	/* address of boot parameters */
 	gd->bd->bi_boot_params = PHYS_SDRAM + 0x100;
 
-	/* Re-read global HWID variable after relocation */
-	get_hwid();
+	ccimx6_init();
+#ifdef CONFIG_CMD_SATA
+	setup_sata();
+#endif
+	setup_board_audio();
 
 	return 0;
 }

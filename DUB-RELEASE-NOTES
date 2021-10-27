@@ -2,6 +2,9 @@
 Digi U-Boot RELEASE NOTES
 -------------------------
 
+v2013.04 - DUB-2.3.10.1, released on 2021/11/1
+	- Added support for ConnectCore 6 N.
+
 v2013.04 - DUB-2.3.9.1, released on 2015/12/15
 	- Added support and DDR3 calibration for variant 0x13.
 	- Fixed erase operation for eMMC.

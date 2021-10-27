@@ -26,6 +26,7 @@
 #define DA9063_GPIO10_11_ADDR		0x1a
 #define DA9063_GPIO_MODE0_7_ADDR	0x1d
 #define DA9063_GPIO_MODE8_15_ADDR	0x1e
+#define DA9063_LDO9_CONT		0x2e
 #define DA9063_VLDO4_CONT_ADDR		0x29
 #define DA9063_BCORE2_CONF_ADDR		0x9d
 #define DA9063_BCORE1_CONF_ADDR		0x9e
@@ -70,14 +71,18 @@
 #define DA9063_E_GPIO8			0x01
 #define DA9063_E_GPIO9			0x02
 
+/* Base CC6N Hardware Version */
+#define CCIMX6N_BASE_HV			0x0B
+
 /* Common ccimx6 functions */
 int pmic_read_reg(int reg, unsigned char *value);
 int pmic_write_reg(int reg, unsigned char value);
 int pmic_write_bitfield(int reg, unsigned char mask, unsigned char off,
 			       unsigned char bfval);
+int is_ccimx6n(void);
 int setup_sata(void);
 void setup_iomux_enet(void);
-int ccimx6_early_init(void);
+int ccimx6_init(void);
 int ccimx6_late_init(void);
 int get_carrierboard_version(void);
 

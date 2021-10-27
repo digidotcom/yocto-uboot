@@ -51,7 +51,6 @@
 DECLARE_GLOBAL_DATA_PTR;
 
 struct ccimx6_hwid my_hwid;
-static u32 hwid[CONFIG_HWID_WORDS_NUMBER];
 static block_dev_desc_t *mmc_dev;
 static int mmc_dev_index = -1;
 static int enet_xcv_type;
@@ -782,6 +781,12 @@ int pmic_write_bitfield(int reg, unsigned char mask, unsigned char off,
 }
 #endif /* CONFIG_I2C_MXC */
 
+int is_ccimx6n(void)
+{
+	/* If HWID is empty, default to CC6N */
+	return my_hwid.hv ? my_hwid.hv >= CCIMX6N_BASE_HV : 1;
+}
+
 #ifdef CONFIG_FSL_ESDHC
 
 /* The order of MMC controllers here must match that of CONFIG_MMCDEV_USDHCx
@@ -894,6 +899,13 @@ int board_mmc_init(bd_t *bis)
 			break;
 		case 1:
 			/* USDHC2 (uSD) */
+
+			/*
+			 * On CC6N enable LDO9 regulator powering USDHC2
+			 * (microSD)
+			 */
+			pmic_write_bitfield(DA9063_LDO9_CONT, 0x1, 0, 0x1);
+
 			imx_iomux_v3_setup_multiple_pads(
 					usdhc2_pads, ARRAY_SIZE(usdhc2_pads));
 			usdhc_cfg[i].sdhc_clk = mxc_get_clock(MXC_ESDHC2_CLK);
@@ -1155,9 +1167,6 @@ int ccimx6_late_init(void)
 #endif
 
 #ifdef CONFIG_I2C_MXC
-	/* Setup I2C2 (PMIC, Kinetis) */
-	setup_i2c(1, CONFIG_SYS_I2C_SPEED,
-			CONFIG_SYS_I2C_SLAVE, &i2c_pad_info1);
 #ifdef CONFIG_I2C_MULTI_BUS
 	/* Setup I2C3 (HDMI, Audio...) */
 	setup_i2c(2, CONFIG_SYS_I2C_SPEED,
@@ -1238,16 +1247,16 @@ void board_print_manufid(u32 *hwid)
 	       hwid[1] & 0xf);
 }
 
-static int is_valid_hwid(u8 variant)
+static int is_valid_hwid(struct ccimx6_hwid *hwid)
 {
-	if (variant < ARRAY_SIZE(ccimx6_variants))
-		if (ccimx6_variants[variant].cpu != IMX6_NONE)
+	if (hwid->variant < ARRAY_SIZE(ccimx6_variants))
+		if (ccimx6_variants[hwid->variant].cpu != IMX6_NONE)
 			return 1;
 
 	return 0;
 }
 
-static int array_to_hwid(u32 *hwid)
+static void array_to_hwid(u32 *hwid)
 {
 	/*
 	 *                      MAC1 (Bank 4 Word 3)
@@ -1264,10 +1273,6 @@ static int array_to_hwid(u32 *hwid)
 	 * HWID: | Location |  GenID |      Serial number      |
 	 *       +----------+--------+-------------------------+
 	 */
-
-	if (!is_valid_hwid((hwid[1] >> 8) & 0xff))
-		return -EINVAL;
-
 	my_hwid.year = (hwid[1] >> 26) & 0x3f;
 	my_hwid.week = (hwid[1] >> 20) & 0x3f;
 	my_hwid.variant = (hwid[1] >> 8) & 0xff;
@@ -1276,8 +1281,6 @@ static int array_to_hwid(u32 *hwid)
 	my_hwid.location = (hwid[0] >> 27) & 0x1f;
 	my_hwid.genid = (hwid[0] >> 20) & 0x7f;
 	my_hwid.sn = hwid[0] & 0xfffff;
-
-	return  0;
 }
 
 int manufstr_to_hwid(int argc, char *const argv[], u32 *val)
@@ -1407,6 +1410,7 @@ err:
 
 int get_hwid(void)
 {
+	u32 hwid[CONFIG_HWID_WORDS_NUMBER];
 	u32 bank = CONFIG_HWID_BANK;
 	u32 word = CONFIG_HWID_START_WORD;
 	u32 cnt = CONFIG_HWID_WORDS_NUMBER;
@@ -1418,7 +1422,9 @@ int get_hwid(void)
 			return -1;
 	}
 
-	return(array_to_hwid(hwid));
+	array_to_hwid(hwid);
+
+	return 0;
 }
 
 void fdt_fixup_hwid(void *fdt)
@@ -1465,7 +1471,7 @@ void fdt_fixup_hwid(void *fdt)
 
 int board_has_emmc(void)
 {
-	if (is_valid_hwid(my_hwid.variant))
+	if (is_valid_hwid(&my_hwid))
 		return (ccimx6_variants[my_hwid.variant].capabilities &
 				    CCIMX6_HAS_EMMC);
 	else
@@ -1474,7 +1480,7 @@ int board_has_emmc(void)
 
 int board_has_wireless(void)
 {
-	if (is_valid_hwid(my_hwid.variant))
+	if (is_valid_hwid(&my_hwid))
 		return (ccimx6_variants[my_hwid.variant].capabilities &
 				    CCIMX6_HAS_WIRELESS);
 	else
@@ -1483,7 +1489,7 @@ int board_has_wireless(void)
 
 int board_has_bluetooth(void)
 {
-	if (is_valid_hwid(my_hwid.variant))
+	if (is_valid_hwid(&my_hwid))
 		return (ccimx6_variants[my_hwid.variant].capabilities &
 				    CCIMX6_HAS_BLUETOOTH);
 	else
@@ -1492,7 +1498,7 @@ int board_has_bluetooth(void)
 
 int board_has_kinetis(void)
 {
-	if (is_valid_hwid(my_hwid.variant))
+	if (is_valid_hwid(&my_hwid))
 		return (ccimx6_variants[my_hwid.variant].capabilities &
 				    CCIMX6_HAS_KINETIS);
 	else
@@ -1538,7 +1544,7 @@ int checkboard(void)
 		printf("(undefined version)\n");
 	else
 		printf("v%d\n", board_ver);
-	if (!get_hwid())
+	if (is_valid_hwid(&my_hwid))
 		printf("Variant: 0x%02x - %s\n", my_hwid.variant,
 			ccimx6_variants[my_hwid.variant].id_string);
 
@@ -1554,7 +1560,7 @@ int checkboard(void)
 }
 
 #if defined(CONFIG_OF_BOARD_SETUP)
-void fdt_fixup_mac(void *fdt, char *varname, char *node)
+void fdt_fixup_mac(void *fdt, char *varname, char *node, char *property)
 {
 	char *tmp, *end;
 	unsigned char mac_addr[6];
@@ -1566,7 +1572,7 @@ void fdt_fixup_mac(void *fdt, char *varname, char *node)
 			if (tmp)
 				tmp = (*end) ? end+1 : end;
 		}
-		do_fixup_by_path(fdt, node, "mac-address", &mac_addr, 6, 1);
+		do_fixup_by_path(fdt, node, property, &mac_addr, 6, 1);
 	}
 }
 
@@ -1575,17 +1581,22 @@ void ft_board_setup(void *blob, bd_t *bd)
 {
 
 	/* Re-read HWID which could have been overriden by U-Boot commands */
-	if (!get_hwid())
-		fdt_fixup_hwid(blob);
+	fdt_fixup_hwid(blob);
 
 #ifdef CONFIG_HAS_CARRIERBOARD_VERSION
 	fdt_fixup_carrierboard(blob);
 #endif /* CONFIG_HAS_CARRIERBOARD_VERSION */
 
 	if (board_has_wireless())
-		fdt_fixup_mac(blob, "wlanaddr", "/wireless");
+		/* Wireless MACs */
+		fdt_fixup_mac(blob, "wlanaddr", "/wireless", "mac-address");
+		if (is_ccimx6n()) {
+			fdt_fixup_mac(blob, "wlan1addr", "/wireless", "mac-address1");
+			fdt_fixup_mac(blob, "wlan2addr", "/wireless", "mac-address2");
+			fdt_fixup_mac(blob, "wlan3addr", "/wireless", "mac-address3");
+		}
 	if (board_has_bluetooth())
-		fdt_fixup_mac(blob, "btaddr", "/bluetooth");
+		fdt_fixup_mac(blob, "btaddr", "/bluetooth", "mac-address");
 }
 #endif /* CONFIG_OF_BOARD_SETUP */
 
@@ -1733,7 +1744,7 @@ int board_update_chunk(otf_data_t *otfd)
 	return 0;
 }
 
-int ccimx6_early_init(void)
+int ccimx6_init(void)
 {
 	if (get_hwid()) {
 		printf("Cannot read HWID\n");
@@ -1747,6 +1758,11 @@ int ccimx6_early_init(void)
 	 * be accessing the RAM on their own.
 	 */
 	update_ddr3_calibration(my_hwid.variant);
+
+#ifdef CONFIG_I2C_MXC
+	/* Setup I2C2 (PMIC, Kinetis) */
+	setup_i2c(1, CONFIG_SYS_I2C_SPEED, 0x7f, &i2c_pad_info1);
+#endif
 
 	return 0;
 }
