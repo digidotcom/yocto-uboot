@@ -54,6 +54,8 @@ struct ccardimx28_ident ccardimx28_id[] = {
 /* 0x10 - 55001667-02 */	{ 0x8000000,   128, 1, "i.MX287, 1 Eth, 2 USB, Wireless, BT, LCD, JTAG"},
 /* 0x11 - 55001668-02 */	{ 0x8000000,   128, 1, "i.MX287, 2 Eth, 1 USB, Wireless, BT, LCD, JTAG"},
 /* 0x12 - 55001667-04 */	{ 0x8000000,   128, 1, "i.MX280, 1 Eth, 2 USB, Wireless, BT"},
+/* 0x13 - 55001671-10 */	{ 0x8000000,   128, 0, "i.MX283, 1 Eth, 2 USB, LCD"},
+/* 0x14 - 55001671-11 */	{ 0x8000000,   128, 0, "i.MX280, 1 Eth, 2 USB, JTAG"},
 };
 
 #endif	/* __BOARD_CCARDIMX28_H_ */

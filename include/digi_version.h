@@ -1,7 +1,7 @@
 /*
  *  include/digi_version.h
  *
- *  Copyright (C) 2009 - 2011 by Digi International Inc.
+ *  Copyright (C) 2009 - 2021 by Digi International Inc.
  *  All rights reserved.
  *
  *  This program is free software; you can redistribute it and/or modify it
@@ -12,6 +12,6 @@
 #ifndef __DIGI_VERSION_H
 #define __DIGI_VERSION_H
 
-#define VERSION_TAG	"DUB-2.0.3.1"
+#define VERSION_TAG	"DUB-2.0.4.1"
 
 #endif /* __DIGI_VERSION_H */
