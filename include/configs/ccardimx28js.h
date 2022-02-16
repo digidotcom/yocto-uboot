@@ -337,4 +337,7 @@
 
 #define CONFIG_BOOTCOMMAND	"dboot linux flash"
 
+/* Base CCIMX28N Hardware Version */
+#define CCIMX28N_BASE_HV	0x0C
+
 #endif /* __CCARDIMX28JS_CONFIG_H__ */

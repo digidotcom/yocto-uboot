@@ -2,6 +2,9 @@
 U-Boot RELEASE NOTES
 --------------------
 
+v2013.01 - DUB-2.0.5.1, released on 2022/16/02
+        - ccardimx28: added support for ConnectCard i.MX28 N.
+
 v2013.01 - DUB-2.0.4.1, released on 2021/11/01
         - ccardimx28: add variants 0x13 (55001671-10) and 0x14 (55001671-11)
 

@@ -277,6 +277,12 @@ void mx28_adjust_mac(int dev_id, unsigned char *mac)
 #endif
 
 #if defined(CONFIG_PLATFORM_HAS_HWID)
+int is_ccardimx28n(void)
+{
+	/* If HWID is empty, default to CCIMX28N */
+	return mod_hwid.hv ? mod_hwid.hv >= CCIMX28N_BASE_HV : 1;
+}
+
 static int is_valid_hw_id(u8 variant)
 {
 	if (variant < ARRAY_SIZE(ccardimx28_id))
@@ -388,37 +394,19 @@ void fdt_fixup_hwid(void *fdt)
 }
 #endif /* CONFIG_PLATFORM_HAS_HWID */
 
-void fdt_fixup_bluetooth_mac(void *fdt)
+void fdt_fixup_mac(void *fdt, char *varname, char *node, char *property)
 {
 	char *tmp, *end;
 	unsigned char mac_addr[6];
 	int i;
 
-	if ((tmp = getenv("btaddr")) != NULL) {
+	if ((tmp = getenv(varname)) != NULL) {
 		for (i = 0; i < 6; i++) {
 			mac_addr[i] = tmp ? simple_strtoul(tmp, &end, 16) : 0;
 			if (tmp)
 				tmp = (*end) ? end+1 : end;
 		}
-		do_fixup_by_path(fdt, "/bluetooth", "mac-address",
-				 &mac_addr, 6, 1);
-	}
-}
-
-void fdt_fixup_wireless_mac(void *fdt)
-{
-	char *tmp, *end;
-	unsigned char mac_addr[6];
-	int i;
-
-	if ((tmp = getenv("wlanaddr")) != NULL) {
-		for (i = 0; i < 6; i++) {
-			mac_addr[i] = tmp ? simple_strtoul(tmp, &end, 16) : 0;
-			if (tmp)
-				tmp = (*end) ? end+1 : end;
-		}
-		do_fixup_by_path(fdt, "/wireless", "mac-address",
-				 &mac_addr, 6, 1);
+		do_fixup_by_path(fdt, node, property, &mac_addr, 6, 1);
 	}
 }
 
@@ -432,8 +420,16 @@ void ft_board_setup(void *blob, bd_t *bd)
 	fdt_fixup_hwid(blob);
 #endif /* CONFIG_PLATFORM_HAS_HWID */
 
-	fdt_fixup_bluetooth_mac(blob);
-	fdt_fixup_wireless_mac(blob);
+	/* Wireless MACs */
+	fdt_fixup_mac(blob, "wlanaddr", "/wireless", "mac-address");
+#if defined(CONFIG_PLATFORM_HAS_HWID)
+	if (is_ccardimx28n()) {
+		fdt_fixup_mac(blob, "wlan1addr", "/wireless", "mac-address1");
+		fdt_fixup_mac(blob, "wlan2addr", "/wireless", "mac-address2");
+		fdt_fixup_mac(blob, "wlan3addr", "/wireless", "mac-address3");
+	}
+#endif /* CONFIG_PLATFORM_HAS_HWID */
+	fdt_fixup_mac(blob, "btaddr", "/bluetooth", "mac-address");
 }
 #endif /* CONFIG_OF_BOARD_SETUP */
 
